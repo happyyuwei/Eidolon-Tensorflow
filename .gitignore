@@ -1,0 +1,6 @@
+app/*[!*.md]
+data/*[!*.md]
+experiments/*/*[!*.py]
+trained_models/*[!*.md]
+gui/runtime/*
+__pycache__

@@ -1,0 +1,170 @@
+import tensorflow as tf
+import numpy as np
+import os
+import sys
+import pickle
+
+
+def load_image(image_file, image_type, input_num, is_train, image_width, image_height, flap_probability, crop_width, crop_height):
+    """
+    @update 2019.12.22
+    新增支持多种图片格式，可选jpg,png,bmp。
+
+    loader images, the left is grand truth, the right list is input,
+    currently, one or two inputs are supported,
+    use input_num to point out.
+    :param image_file:
+    :param image_type:
+    :param input_num:
+    :param is_train:
+    :param image_width:
+    :param image_height:
+    :param flap_probability
+    :param input_concat
+    :param crop_width
+    :param crop_height
+    :return:
+    """
+    # 读取图片
+    image = tf.io.read_file(image_file)
+
+    # jpg格式
+    if image_type == "jpg":
+        image = tf.image.decode_jpeg(image)
+    # png 格式
+    elif image_type == "png":
+        image = tf.image.decode_png(image)
+    # bmp 格式
+    elif image_type == "bmp":
+        image = tf.image.decode_bmp(image)
+    else:
+        print("error: unsupported image type: {}".format(image_type))
+        sys.exit()
+
+    # only three channel currently
+    # author yuwei
+    # @since 2019.9.14
+    image = image[:, :, 0:3]
+
+    # get image width
+    w = tf.shape(image)[1]
+
+    w = w // (input_num + 1)
+    # the left is label, the right is input, 1 and 2
+    real_image = image[:, :w, :]
+    input_image_1 = image[:, w:2 * w, :]
+    if input_num == 2:
+        input_image_2 = image[:, 2 * w:3 * w, :]
+    else:
+        # useless input 2
+        input_image_2 = input_image_1
+
+    # to float 32
+    input_image_1 = tf.cast(input_image_1, tf.float32)
+    input_image_2 = tf.cast(input_image_2, tf.float32)
+    real_image = tf.cast(real_image, tf.float32)
+
+    if is_train:
+        # random
+        # resizing to 286 x 286 x 3
+        # we have to inform that the image_height is in front of  image_width,
+        # because image_height is the row number of a matrix and the image_width is the column number of it.
+        # The size of a matrix can be described by [row, column], so the image matrix is [image_height, image_width]
+        input_image_1 = tf.image.resize(
+            input_image_1, [image_height + crop_height, image_width + crop_width])
+        input_image_2 = tf.image.resize(
+            input_image_2, [image_height + crop_height, image_width + crop_width])
+        real_image = tf.image.resize(
+            real_image, [image_height + crop_height, image_width + crop_width])
+
+        # 隨機裁剪
+        stacked_image = tf.stack(
+            [input_image_1, input_image_2, real_image], axis=0)
+        cropped_image = tf.image.random_crop(
+            stacked_image, size=[3, image_height, image_width, 3])
+
+        input_image_1 = cropped_image[0]
+        input_image_2 = cropped_image[1]
+        real_image = cropped_image[2]
+
+        if tf.random.uniform(()) < flap_probability:
+            # random mirroring
+            input_image_1 = tf.image.flip_left_right(input_image_1)
+            input_image_2 = tf.image.flip_left_right(input_image_2)
+            real_image = tf.image.flip_left_right(real_image)
+
+
+    else:
+        input_image_1 = tf.image.resize(
+            input_image_1, size=[image_height, image_width])
+        input_image_2 = tf.image.resize(
+            input_image_2, size=[image_height, image_width])
+        real_image = tf.image.resize(
+            real_image, size=[image_height, image_width])
+
+    # normalizing the images to [-1, 1]
+    input_image_1 = (input_image_1 / 127.5) - 1
+    if input_num == 2:
+        input_image_2 = (input_image_2 / 127.5) - 1
+    real_image = (real_image / 127.5) - 1
+
+    # concat if necessary
+    if input_num == 2:
+        input_image = tf.concat([input_image_1, input_image_2], axis=-1)
+    else:
+        input_image = input_image_1
+
+    return input_image, real_image
+
+
+class ImageLoader:
+    """
+    由1.0版本的dataLoader修改而成。
+    图像载入类，其输入输出图像需要拼接成一张图。
+    左边：输出，右边：输入。若输入为多张图，则右边一次为输入1，输入2...
+    """
+
+    def __init__(self, data_dir, is_training):
+        """
+        :param train_dir:
+        :param is_training:
+        """
+        self.data_dir = data_dir
+        self.is_training = is_training
+
+    def load(self, config_loader):
+        """
+        載入
+        :param config_loader:
+        :return:
+        """
+        # 判断数据存在
+        if os.path.exists(self.data_dir) == False:
+            print("Error: Dataset not exist. {}".format(self.data_dir))
+            sys.exit()
+
+        # get dataset file list
+        dataset = tf.data.Dataset.list_files(
+            os.path.join(self.data_dir, "*.{}".format(config_loader.image_type)))
+        # recalculate buffer size
+        # if buffer_size<=0， adapted the buffer size
+        # then buffer size is the dataset buffer size
+        # recommend buffer_size=0 to adapt the dataset size
+        # @since 2019.1.18
+        # @author yuwei
+        # @version 0.93
+        if config_loader.buffer_size <= 0:
+            config_loader.buffer_size = len(os.listdir(self.data_dir))
+
+        # shuffle the list if necessary
+        if self.is_training == True:
+            dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
+
+        # pretreat images
+        dataset = dataset.map(
+            lambda x: load_image(x, config_loader.image_type, config_loader.input_num, self.is_training, config_loader.image_width,
+                                 config_loader.image_height, config_loader.data_flip, config_loader.crop_width,
+                                 config_loader.crop_height))
+
+        # return batch
+        return dataset.batch(config_loader.batch_size)
