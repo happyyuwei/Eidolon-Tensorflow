@@ -13,7 +13,7 @@ import os
 import importlib
 
 # inner lib
-import config
+from eidolon import config
 
 help = """
 Eidolon: A framework to manage your training.

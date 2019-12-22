@@ -1,11 +1,11 @@
 import tensorflow as tf
 
-import train_tool
-import loader
-import train
-import config
-import loss_util
-from model.pixel import UNet, Discriminator
+from eidolon import train_tool
+from eidolon import loader
+from eidolon import train
+from eidolon import config
+from eidolon import loss_util
+from eidolon.model.pixel import UNet, Discriminator
 
 import os
 

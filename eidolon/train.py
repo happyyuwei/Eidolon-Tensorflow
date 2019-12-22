@@ -1,8 +1,11 @@
+# third part lib
 import tensorflow as tf
 
-import train_tool
-import loader
+# inner lib
+from eidolon import train_tool
+from eidolon import loader
 
+# system lib
 import os
 import time
 import importlib
@@ -53,7 +56,7 @@ class Container:
 
         # 加载模型
         if self.config_loader.load_latest_checkpoint == True:
-            #寻找最新的模型
+            # 寻找最新的模型
             checkpoint_states = tf.train.get_checkpoint_state(
                 self.config_loader.checkpoints_dir)
             # 如果模型不存在，则启动新训练
@@ -120,9 +123,9 @@ class Container:
             start = time.time()
 
             # inovke each round
-            #train epoch
+            # train epoch
             self.on_train(epoch)
-            #test epoch
+            # test epoch
             self.on_test(epoch)
 
             # update epoch
@@ -143,9 +146,14 @@ def main(config_loader):
     """
 
     # 创建训练类
-    # 名称是以点的形式创建
+    # 名称是以点的形式创建，如：eidolon.pixel_container.PixelContainer
     # split the module name and class name
-    module_name, class_name = config_loader.container.split(".")
+    split_list = config_loader.container.split(".")
+    
+    module_name=".".join(split_list[0:len(split_list)-1])
+    class_name=split_list[-1]
+    print("load container：model_name={}, class_name={}".format(module_name,class_name))
+    
     # load training function in train_watermark
     o = importlib.import_module(module_name)
     Container = getattr(o, class_name)

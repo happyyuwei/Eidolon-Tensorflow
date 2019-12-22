@@ -1,10 +1,12 @@
+#system lib
 import os
 import sys
 import getopt
-import config
 import shutil
 import platform
 
+#inner lib
+from eidolon import config
 
 def create_train_bootstrap(running_script):
     """
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     # 应用名
     app_name = None
     # 运行脚本
-    running_script = "train.py"
+    running_script = "eidolon.train.py"
     # 默认推荐使用JSON格式
     conf = "config.json"
 
