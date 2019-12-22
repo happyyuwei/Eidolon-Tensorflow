@@ -154,21 +154,27 @@ class PixelContainer(train.Container):
 
     def on_train(self, current_epoch):
         """
-        重写父类方法
+        重写训练父类方法
         """
         for image_num, (input_image, target) in self.train_dataset.enumerate():
              # @since 2019.11.28 将该打印流变成原地刷新
             print("\r"+"input_image {}...".format(image_num), end="", flush=True)
 
             # 训练一个batch
-            loss_set = self.train_batch(input_image, target)
+            self.loss_set = self.train_batch(input_image, target)
         # change line
-
         print()
+        # 调用父类方法
+        super(PixelContainer, self).on_test(current_epoch)
+
+    def on_test(self, current_epoch):
+        """
+        重写测试父类方法
+        """
         # save test result
         if current_epoch % self.config_loader.save_period == 0:
             # 保存损失
-            self.log_tool.save_loss(loss_set)
+            self.log_tool.save_loss(self.loss_set)
 
             # 测试可视化结果
             for test_input, test_target in self.test_dataset.take(1):
@@ -181,4 +187,4 @@ class PixelContainer(train.Container):
                 self.log_tool.save_image_list(image_list, title_list)
 
         # 调用父类方法
-        super(PixelContainer, self).on_train(current_epoch)
+        super(PixelContainer, self).on_test(current_epoch)

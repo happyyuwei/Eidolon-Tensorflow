@@ -70,7 +70,7 @@ class Container:
         训练开始调用，允许重写
         默认完成以下任务：
         1. 每轮训练完，移除历史检查点。
-        2. 每轮训练完，保存模型检查点。
+        2. 每轮训练完，保存模型检查点。该函数默认不提供内容。
         """
         # saving (checkpoint) the model every 20 epochs
         if current_epoch % self.config_loader.save_period == 0:
@@ -83,6 +83,13 @@ class Container:
             # save the checkpoint
             self.checkpoint.save(file_prefix=self.checkpoint_prefix)
             print("Store current checkpoint successfully....")
+
+    def on_test(self, current_epoch):
+        """
+        测试开始调用，允许重写
+        默认不提供任何方法。
+        """
+        pass
 
     def on_finish(self):
         """
@@ -113,7 +120,10 @@ class Container:
             start = time.time()
 
             # inovke each round
+            #train epoch
             self.on_train(epoch)
+            #test epoch
+            self.on_test(epoch)
 
             # update epoch
             self.log_tool.update_epoch()

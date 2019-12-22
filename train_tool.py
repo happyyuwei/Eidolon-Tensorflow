@@ -251,15 +251,16 @@ class LogTool:
 
     def plot_model(self, model, model_name):
         """
-        绘画模型结构
+        绘画模型结构,需要安装pydot.
         """
         """
+        需要注意参数rankdir，官方解释如下：
         rankdir argument passed to PyDot, 
         a string specifying the format of the plot: 'TB' creates a vertical plot; 
         'LR' creates a horizontal plot.
         """
         file=os.path.join(self.log_dir,"{}.png".format(model_name))
-        tf.keras.utils.plot_model(model, to_file=file, show_shapes=True, rankdir="LR", dpi=64)
+        tf.keras.utils.plot_model(model, to_file=file, show_shapes=True, rankdir="TB", dpi=64)
 
 
 
