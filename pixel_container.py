@@ -44,6 +44,8 @@ class PixelContainer(train.Container):
         self.generator = UNet(
             high_performance_enable=self.config_loader.high_performance)
         print("Initial generator....")
+        self.log_tool.plot_model(self.generator, "generator")
+        print("Generator structure plot....")
 
         # 创建生成优化器
         self.generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
@@ -58,6 +60,9 @@ class PixelContainer(train.Container):
             # 创建判决网络
             self.discriminator = Discriminator()
             print("Initial discriminator....")
+            self.log_tool.plot_model(self.generator, "discriminator")
+            print("Generator discriminator plot....")
+
             # 创建判决优化器
             self.discriminator_optimizer = tf.keras.optimizers.Adam(
                 2e-4, beta_1=0.5)
