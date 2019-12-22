@@ -165,7 +165,7 @@ class PixelContainer(train.Container):
         # change line
         print()
         # 调用父类方法
-        super(PixelContainer, self).on_test(current_epoch)
+        super(PixelContainer, self).on_train(current_epoch)
 
     def on_test(self, current_epoch):
         """
