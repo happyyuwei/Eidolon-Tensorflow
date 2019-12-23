@@ -168,3 +168,82 @@ class ImageLoader:
 
         # return batch
         return dataset.batch(config_loader.batch_size)
+
+def load_cifar(cifar_file, train_num, test_num):
+    """
+    this function is to use to load cifar images to tensor
+    @update 2019.11.30
+    移至loader文件作为基础设施
+    @since 2019.9.20
+    @author yuwei
+    :param cifar_file:
+    :param train_num:
+    :param test_num:
+    :return:
+    """
+    with open(cifar_file, 'rb') as fo:
+        # load dictionary
+        dict = pickle.load(fo, encoding='bytes')
+        # load labels
+        labels = dict[b'labels']
+        # load images binary
+        imgs = dict[b'data']
+
+    # image list
+    image_list = []
+    # currently, I only use ship images, the label is 8
+    for i in range(len(labels)):
+        if labels[i] == 8:
+            # reshape the image to RGB channel
+            img = np.reshape(imgs[i], (3, 32, 32))
+            temp = np.zeros([32, 32, 3])
+            temp[:, :, 0] = img[0, :, :]
+            temp[:, :, 1] = img[1, :, :]
+            temp[:, :, 2] = img[2, :, :]
+            img = temp
+            image_list.append(img)
+
+    image_array = np.zeros([len(image_list), 32, 32, 3])
+    # to image array, the first axis is image number, then the three change is RGB
+    for i in range(len(image_array)):
+        image_array[i, :, :, :] = image_list[i]
+
+    # to float32 tensor
+    image_array = tf.convert_to_tensor(image_array.astype("float32"))
+    image_array = (image_array - 127.5) / 127.5
+
+    return image_array[0:train_num, :, :, :], image_array[train_num:train_num + test_num, :, :, :]
+
+
+
+def load_mnist(mnist_file, train_num, test_num):
+    """
+    @update 2019.12.3
+    移至loader文件作为基础设施
+    load the mnist dataset and change it to binary images
+    :param mnist_file:
+    :param train_num:
+    :param test_num:
+    :return:
+    """
+    # load file，the file [0,255]
+    images = np.load(mnist_file)
+    # change shape
+    images = images.reshape(images.shape[0], 28, 28, 1).astype("float32")
+    images = tf.image.resize(images, [32, 32])
+    images = (images - 127.5) / 127.5  # Normalize the images to [-1, 1]
+    images = np.array(images)
+    # binary value -1 and 1
+    images[images >= 0] = 1
+    images[images < 0] = -1
+
+    #变成三通道
+    temp=np.zeros([np.shape(images)[0], 32, 32, 3])
+    temp[:,:,:,0]=images[:,:,:,0]
+    temp[:,:,:,1]=images[:,:,:,0]
+    temp[:,:,:,2]=images[:,:,:,0]
+
+    # convert to tensor
+    images = tf.convert_to_tensor(temp.astype("float32"))
+    # the first is train images and the second is test images
+    return images[0:train_num, :, :, :], images[train_num:train_num + test_num, :, :, :]

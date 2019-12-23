@@ -40,7 +40,7 @@ def upsample(filters, size, apply_dropout=False):
     return result
 
 
-def UNet(high_performance_enable=False):
+def UNet(input_shape, high_performance_enable=False):
     """
     UNet 网络
     如果在低配GPU中，可能发生网络结构过于复杂而显存不足的情况。禁用该选项时，会把UNet中的编码器最后一层与解码器第一层去除。
@@ -48,7 +48,7 @@ def UNet(high_performance_enable=False):
     """
 
 
-    inputs = tf.keras.layers.Input(shape=[256, 256, 3])
+    inputs = tf.keras.layers.Input(shape=input_shape)
 
     down_stack = [
         downsample(64, 4, apply_batchnorm=False),  # (bs, 128, 128, 64)
@@ -102,11 +102,11 @@ def UNet(high_performance_enable=False):
     return tf.keras.Model(inputs=inputs, outputs=x)
 
 
-def Discriminator():
+def Discriminator(input_shape):
     initializer = tf.random_normal_initializer(0., 0.02)
 
-    inp = tf.keras.layers.Input(shape=[256, 256, 3], name='input_image')
-    tar = tf.keras.layers.Input(shape=[256, 256, 3], name='target_image')
+    inp = tf.keras.layers.Input(shape=input_shape, name='input_image')
+    tar = tf.keras.layers.Input(shape=input_shape, name='target_image')
 
     x = tf.keras.layers.concatenate([inp, tar])  # (bs, 256, 256, channels*2)
 
@@ -131,17 +131,17 @@ def Discriminator():
     return tf.keras.Model(inputs=[inp, tar], outputs=last)
 
 
-def generator_loss(disc_generated_output, gen_output, target):
+# def generator_loss(disc_generated_output, gen_output, target):
     
-    gan_loss = binary_cross_entropy(tf.ones_like(
-        disc_generated_output), disc_generated_output)
+#     gan_loss = binary_cross_entropy(tf.ones_like(
+#         disc_generated_output), disc_generated_output)
 
-    # mean absolute error
-    l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
+#     # mean absolute error
+#     l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
 
-    total_gen_loss = gan_loss + (LAMBDA * l1_loss)
+#     total_gen_loss = gan_loss + (LAMBDA * l1_loss)
 
-    return total_gen_loss, gan_loss, l1_loss
+#     return total_gen_loss, gan_loss, l1_loss
 
 
 # binary_cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)

@@ -41,8 +41,9 @@ class PixelContainer(train.Container):
         print("Load dataset, {}....".format(self.config_loader.data_dir))
 
         # 创建生成网络
-        self.generator = UNet(
+        self.generator = UNet(input_shape=self.config_loader.config["dataset"]["image_size"]["value"],
             high_performance_enable=self.config_loader.high_performance)
+
         print("Initial generator....")
         self.log_tool.plot_model(self.generator, "generator")
         print("Generator structure plot....")
@@ -58,7 +59,7 @@ class PixelContainer(train.Container):
         # 只有在用户设置使用判决网络时才会使用
         if self.config_loader.discriminator != "no":
             # 创建判决网络
-            self.discriminator = Discriminator()
+            self.discriminator = Discriminator(input_shape=self.config_loader.config["dataset"]["image_size"]["value"])
             print("Initial discriminator....")
             self.log_tool.plot_model(self.generator, "discriminator")
             print("Generator discriminator plot....")

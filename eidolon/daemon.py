@@ -81,6 +81,10 @@ def run(argv):
     #设置最大递归深度
     sys.setrecursionlimit(9000000)
 
+    # 将根目录添加到环境中，否则其他子文件夹内的目录可能存在import找不到的情况
+    # 由于运行路径是./app/app_name/,因此根路径在两层目录之前。
+    sys.path.append("../../")
+
     # try:
     # search main function
     main_func = getattr(module, "main")
@@ -91,6 +95,4 @@ def run(argv):
     #         running_script))
 
 
-if __name__ == "__main__":
-    # start running
-    run(sys.argv)
+

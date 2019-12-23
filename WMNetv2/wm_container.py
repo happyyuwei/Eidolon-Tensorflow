@@ -2,7 +2,7 @@
 该脚本定义水印训练，继承至pixel-to-pixel
 """
 
-import pixel_container
+from eidolon import pixel_container
 
 class WMContainer(pixel_container.PixelContainer):
 

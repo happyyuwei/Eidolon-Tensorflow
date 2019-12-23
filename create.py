@@ -16,7 +16,7 @@ def create_train_bootstrap(running_script):
     """
 
     # 运行指令
-    run_cmd = "python ../../daemon.py --env=./ --config=config.json --script={}".format(running_script)
+    run_cmd = "python ../../main.py --env=./ --config=config.json --script={}".format(running_script)
 
     # 检查当前系统，如果是winsows系统，则生成bat; 如果是linux系统，则生成sh
     system = platform.system()

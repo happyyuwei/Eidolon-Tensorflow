@@ -59,7 +59,8 @@ default_config = {
     "training": {
         "keys": ["epoch", "save_period", "data_dir", "checkpoints_dir", "log_dir", "training_device", "remove_history_checkpoints", "load_latest_checkpoints"],
         "container": {
-            "value": "pixel_container.PixelContainer"
+            "value": "eidolon.pixel_container.PixelContainer",
+            "desc": "定义训练使用的容器。容器用于管理整个训练的生命周期。"
         },
         "epoch": {
             "value": 2000,
@@ -83,7 +84,7 @@ default_config = {
         },
         "training_device": {
             "value": "default",
-            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：CPU:0，GPU:0。若使用默认设备，输入default"
+            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：/CPU:0，/GPU:0。若使用默认设备，输入default"
         },
         "remove_history_checkpoints": {
             "value": True,
