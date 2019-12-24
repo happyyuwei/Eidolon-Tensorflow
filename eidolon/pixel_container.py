@@ -163,7 +163,7 @@ class PixelContainer(train.Container):
                                                 generator_variables)
         # 优化网络参数
         self.generator_optimizer.apply_gradients(zip(generator_gradients,
-                                                     self.generator.trainable_variables))
+                                                     generator_variables))
         # 只有当使用判决器时，才需要优化判决器
         if self.config_loader.discriminator != "no":
             # 判决网络损失
