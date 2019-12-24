@@ -90,6 +90,9 @@ def run(argv):
     main_func = getattr(module, "main")
     # start
     main_func(config_loader)
+    
+        
+    
     # except AttributeError:
     #     print("Error: No main function found. Please define main(config) function in the script: {}.py".format(
     #         running_script))

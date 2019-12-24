@@ -1,3 +1,14 @@
-import eidolon.pixel_container as p
+import numpy as np
+import matplotlib.pyplot as plt
 
-print(p)
+im=plt.imread("./WMNetv2/watermark/wm_binary.png")
+im[im<=0.5]=0
+im[im>0.5]=1
+temp=np.zeros(np.shape(im))
+temp[:,:,0]=im[:,:,0]
+temp[:,:,1]=im[:,:,0]
+temp[:,:,2]=im[:,:,0]
+plt.imshow(temp)
+plt.show()
+plt.imsave("y.png",temp)
+

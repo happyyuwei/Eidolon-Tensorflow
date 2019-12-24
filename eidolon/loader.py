@@ -93,7 +93,6 @@ def load_image(image_file, image_type, input_num, is_train, image_width, image_h
             input_image_2 = tf.image.flip_left_right(input_image_2)
             real_image = tf.image.flip_left_right(real_image)
 
-
     else:
         input_image_1 = tf.image.resize(
             input_image_1, size=[image_height, image_width])
@@ -169,9 +168,13 @@ class ImageLoader:
         # return batch
         return dataset.batch(config_loader.batch_size)
 
-def load_cifar(cifar_file, train_num, test_num):
+
+def load_cifar(cifar_file, train_num, test_num, image_shape=[32,32]):
     """
-    this function is to use to load cifar images to tensor
+    this function is to use to load cifar images to tensor, scale=[-1,1]
+    @update 2019.12.24
+    允许修改图像的尺寸,输入的尺寸为二维宽高，通道数固定为3
+
     @update 2019.11.30
     移至loader文件作为基础设施
     @since 2019.9.20
@@ -179,6 +182,7 @@ def load_cifar(cifar_file, train_num, test_num):
     :param cifar_file:
     :param train_num:
     :param test_num:
+    :param image_shape:
     :return:
     """
     with open(cifar_file, 'rb') as fo:
@@ -207,20 +211,27 @@ def load_cifar(cifar_file, train_num, test_num):
     # to image array, the first axis is image number, then the three change is RGB
     for i in range(len(image_array)):
         image_array[i, :, :, :] = image_list[i]
-
+    
     # to float32 tensor
     image_array = tf.convert_to_tensor(image_array.astype("float32"))
+    # 修改尺寸
+    image_array=tf.image.resize(image_array, image_shape)
+
+    #变成【-1,1】
     image_array = (image_array - 127.5) / 127.5
 
     return image_array[0:train_num, :, :, :], image_array[train_num:train_num + test_num, :, :, :]
 
 
-
-def load_mnist(mnist_file, train_num, test_num):
+def load_mnist(mnist_file, train_num, test_num, image_shape=[32,32]):
     """
+    load the mnist dataset and change it to binary images，, scale=[-1,1]
+
+    @update 2019.12.24
+    允许修改图像的尺寸,输入的尺寸为二维宽高，通道数固定为3
+
     @update 2019.12.3
     移至loader文件作为基础设施
-    load the mnist dataset and change it to binary images
     :param mnist_file:
     :param train_num:
     :param test_num:
@@ -228,20 +239,20 @@ def load_mnist(mnist_file, train_num, test_num):
     """
     # load file，the file [0,255]
     images = np.load(mnist_file)
-    # change shape
+    # change shape,数据集中mnist尺寸28*28*1
     images = images.reshape(images.shape[0], 28, 28, 1).astype("float32")
-    images = tf.image.resize(images, [32, 32])
+    images = tf.image.resize(images, image_shape)
     images = (images - 127.5) / 127.5  # Normalize the images to [-1, 1]
     images = np.array(images)
     # binary value -1 and 1
     images[images >= 0] = 1
     images[images < 0] = -1
 
-    #变成三通道
-    temp=np.zeros([np.shape(images)[0], 32, 32, 3])
-    temp[:,:,:,0]=images[:,:,:,0]
-    temp[:,:,:,1]=images[:,:,:,0]
-    temp[:,:,:,2]=images[:,:,:,0]
+    # 变成三通道
+    temp = np.zeros([np.shape(images)[0], image_shape[0], image_shape[1], 3])
+    temp[:, :, :, 0] = images[:, :, :, 0]
+    temp[:, :, :, 1] = images[:, :, :, 0]
+    temp[:, :, :, 2] = images[:, :, :, 0]
 
     # convert to tensor
     images = tf.convert_to_tensor(temp.astype("float32"))

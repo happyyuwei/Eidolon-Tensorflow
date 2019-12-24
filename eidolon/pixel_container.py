@@ -5,7 +5,9 @@ from eidolon import loader
 from eidolon import train
 from eidolon import config
 from eidolon import loss_util
+from eidolon import eval_util
 from eidolon.model.pixel import UNet, Discriminator
+
 
 import os
 
@@ -33,16 +35,19 @@ class PixelContainer(train.Container):
         # 训练数据
         train_loader = loader.ImageLoader(os.path.join(
             self.config_loader.data_dir, "train"), is_training=True)
-        self.train_dataset = train_loader.load(self.config_loader)
+        train_dataset = train_loader.load(self.config_loader)
         # 测试数据
         test_loader = loader.ImageLoader(os.path.join(
             self.config_loader.data_dir, "test"), is_training=False)
-        self.test_dataset = test_loader.load(self.config_loader)
+        test_dataset = test_loader.load(self.config_loader)
         print("Load dataset, {}....".format(self.config_loader.data_dir))
+
+        # 注册数据集
+        self.register_dataset(train_dataset, test_dataset)
 
         # 创建生成网络
         self.generator = UNet(input_shape=self.config_loader.config["dataset"]["image_size"]["value"],
-            high_performance_enable=self.config_loader.high_performance)
+                              high_performance_enable=self.config_loader.high_performance)
 
         print("Initial generator....")
         self.log_tool.plot_model(self.generator, "generator")
@@ -54,14 +59,15 @@ class PixelContainer(train.Container):
 
         # 将模型保存到存储列表，以便框架自动保存
         self.model_map["generator"] = self.generator
-        self.model_map["generator_optimizer"] = self.generator_optimizer
+        self.optimize_map["generator_optimizer"] = self.generator_optimizer
 
         # 只有在用户设置使用判决网络时才会使用
         if self.config_loader.discriminator != "no":
             # 创建判决网络
-            self.discriminator = Discriminator(input_shape=self.config_loader.config["dataset"]["image_size"]["value"])
+            self.discriminator = Discriminator(
+                input_shape=self.config_loader.config["dataset"]["image_size"]["value"])
             print("Initial discriminator....")
-            self.log_tool.plot_model(self.generator, "discriminator")
+            self.log_tool.plot_model(self.discriminator, "discriminator")
             print("Generator discriminator plot....")
 
             # 创建判决优化器
@@ -71,7 +77,7 @@ class PixelContainer(train.Container):
 
             # 注册模型
             self.model_map["discriminator"] = self.discriminator
-            self.model_map["discriminator_optimizer"] = self.discriminator_optimizer
+            self.optimize_map["discriminator_optimizer"] = self.discriminator_optimizer
 
         # 调用父类
         super(PixelContainer, self).on_prepare()
@@ -102,7 +108,7 @@ class PixelContainer(train.Container):
                 disc_real_output, disc_generated_output)
 
             # 总的生成网络损失
-            total_gen_loss = gen_loss+gen_loss+(100*pixel_loss)
+            total_gen_loss = gen_loss+(100*pixel_loss)
 
         else:
             total_gen_loss = pixel_loss
@@ -110,17 +116,23 @@ class PixelContainer(train.Container):
         # 合并结果集
         loss_set = {}
         loss_set["total_gen_loss"] = total_gen_loss
-        #若判决器存在，其损失才会被记录
+        # 若判决器存在，其损失才会被记录
         if self.config_loader.discriminator != "no":
             loss_set["pixel_loss"] = pixel_loss
             loss_set["gen_loss"] = gen_loss
             loss_set["disc_loss"] = disc_loss
 
+        # 记录损失和输出
+        result_set = {
+            "gen_output": gen_output,
+            "loss_set": loss_set
+        }
+
         # 返回损失
-        return loss_set
+        return result_set
 
     @tf.function
-    def train_batch(self, input_image, target):
+    def on_train_batch(self, input_image, target):
         """
         训练一批数据，该函数允许使用tensorflow加速
         """
@@ -128,9 +140,10 @@ class PixelContainer(train.Container):
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
 
             # 计算损失
-            loss_set = self.compute_loss(input_image, target)
+            result_set = self.compute_loss(input_image, target)
 
         # 获取返回的损失
+        loss_set = result_set["loss_set"]
         # 生成网络损失
         total_gen_loss = loss_set["total_gen_loss"]
 
@@ -140,52 +153,71 @@ class PixelContainer(train.Container):
         # 优化网络参数
         self.generator_optimizer.apply_gradients(zip(generator_gradients,
                                                      self.generator.trainable_variables))
-        #只有当使用判决器时，才需要优化判决器
+        # 只有当使用判决器时，才需要优化判决器
         if self.config_loader.discriminator != "no":
             # 判决网络损失
             disc_loss = loss_set["disc_loss"]
-            
+
             discriminator_gradients = disc_tape.gradient(disc_loss,
-                                                        self.discriminator.trainable_variables)
+                                                         self.discriminator.trainable_variables)
 
             self.discriminator_optimizer.apply_gradients(zip(discriminator_gradients,
-                                                            self.discriminator.trainable_variables))
+                                                             self.discriminator.trainable_variables))
         # 继续返回损失，共外部工具记录
         return loss_set
 
-    def on_train(self, current_epoch):
+    def test_metrics(self, loss_set):
         """
-        重写训练父类方法
+        定量测试，默认测试PSNR和SSIM
         """
-        for image_num, (input_image, target) in self.train_dataset.enumerate():
-             # @since 2019.11.28 将该打印流变成原地刷新
-            print("\r"+"input_image {}...".format(image_num), end="", flush=True)
+        # 计算测试集上的PNSR与ssim
+        psnr=0
+        ssim=0
+        batch=0
+        for _, (test_input, test_target) in self.test_dataset.enumerate():
+            # 生成测试结果
+            predicted_image = self.generator(test_input, training=True)
+            result_set=eval_util.evaluate(predicted_image, test_target)
+            psnr=psnr+tf.reduce_mean(result_set["psnr"])
+            ssim=ssim+tf.reduce_mean(result_set["ssim"])
+            batch=batch+1
+        
+        psnr=psnr/batch
+        ssim=ssim/batch
 
-            # 训练一个batch
-            self.loss_set = self.train_batch(input_image, target)
-        # change line
-        print()
-        # 调用父类方法
-        super(PixelContainer, self).on_train(current_epoch)
+        loss_set["test_psnr"]=psnr
+        loss_set["test_ssim"]=ssim
+        return loss_set
 
-    def on_test(self, current_epoch):
+    def test_visual(self):
+        """
+        视觉测试，在测试集上选择一个结果输出可视图像
+        """
+        # 测试可视化结果
+        for test_input, test_target in self.test_dataset.take(1):
+            # 生成测试结果
+            predicted_image = self.generator(test_input, training=True)
+
+        # 排成列表
+        image_list = [test_input, test_target, predicted_image]
+        title_list = ["IN", "GT", "PR"]
+        return image_list, title_list
+
+
+    def on_test_epoch(self, current_epoch, loss_set):
         """
         重写测试父类方法
         """
-        # save test result
-        if current_epoch % self.config_loader.save_period == 0:
-            # 保存损失
-            self.log_tool.save_loss(self.loss_set)
+        #定量测试
+        loss_set=self.test_metrics(loss_set)
+        # 保存损失与定量测试结果
+        self.log_tool.save_loss(loss_set)
 
-            # 测试可视化结果
-            for test_input, test_target in self.test_dataset.take(1):
-                # 生成测试结果
-                predicted_image = self.generator(test_input, training=True)
-                # 排成列表
-                image_list = [test_input, test_target, predicted_image]
-                title_list = ["IN", "GT", "PR"]
-                # 保存
-                self.log_tool.save_image_list(image_list, title_list)
+        #可视化测试
+        image_list, title_list=self.test_visual()
 
+        # 保存可视结果
+        self.log_tool.save_image_list(image_list, title_list)
+        
         # 调用父类方法
-        super(PixelContainer, self).on_test(current_epoch)
+        super(PixelContainer, self).on_test_epoch(current_epoch, loss_set)

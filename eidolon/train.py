@@ -35,8 +35,21 @@ class Container:
         self.checkpoint_prefix = os.path.join(
             self.config_loader.checkpoints_dir, "ckpt")
 
-        #  待保存的模型
+        #  待保存的模型， 继承方法需要保存模型
         self.model_map = {}
+        # 优化器，继承方法需要注册所有优化器
+        self.optimize_map = {}
+        # 数据集, 继承方法需要注册数据集
+        self.train_dataset = None
+        self.test_dataset = None
+
+    def register_dataset(self, train_dataset, test_dataset):
+        """
+        注册数据集，供训练
+        """
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
+    
 
     def on_prepare(self):
         """
@@ -46,13 +59,19 @@ class Container:
         """
         # 创建checkpoint
         self.checkpoint = tf.train.Checkpoint()
+
         # 创建映射
-        self.checkpoint.mapped = self.model_map
+        ckpt_map={}
+        ckpt_map.update(self.model_map)
+        ckpt_map.update(self.optimize_map)
+
+        #设置映射至checkpoint
+        self.checkpoint.mapped = ckpt_map
         print("Initial checkpoint....")
         model_list_name = []
-        for name in self.model_map:
+        for name in ckpt_map:
             model_list_name.append(name)
-        print("Models: {}".format(model_list_name))
+        print("Checkpoints: {}".format(model_list_name))
 
         # 加载模型
         if self.config_loader.load_latest_checkpoint == True:
@@ -68,31 +87,107 @@ class Container:
                 print("No checkpoints found in {}. Training from beginning.".format(
                     self.config_loader.checkpoints_dir))
 
-    def on_train(self, current_epoch):
+    @tf.function
+    def on_train_batch(self, input_image, target):
         """
-        训练开始调用，允许重写
+        每一批的损失, 该函数需要返回损失函数结果的字典。
+        该方法默认不提供内容
+        """
+        pass
+
+    def on_train_epoch(self, current_epoch):
+        """
+        每一轮训练调用，允许重写
         默认完成以下任务：
-        1. 每轮训练完，移除历史检查点。
-        2. 每轮训练完，保存模型检查点。该函数默认不提供内容。
+        1. 获取数据集体
+        2. 调用on_train_batch计算每一批的损失
+        """
+        """
+        重写训练父类方法
+        """
+        for image_num, (input_image, target) in self.train_dataset.enumerate():
+             # @since 2019.11.28 将该打印流变成原地刷新
+            print("\r"+"input_image {}...".format(image_num), end="", flush=True)
+            # 训练一个batch
+            loss_set = self.on_train_batch(input_image, target)
+        # change line
+        print()
+        # 返回 loss结果集
+        return loss_set
+
+    def on_save_epoch(self, current_epoch):
+        """
+        每个保存周期会被调用
         """
         # saving (checkpoint) the model every 20 epochs
-        if current_epoch % self.config_loader.save_period == 0:
-            # remove history checkpoints
-            if self.config_loader.remove_history_checkpoints == True:
-                train_tool.remove_history_checkpoints(
-                    self.config_loader.checkpoints_dir)
-                print("Remove history checkpoints....")
+        # remove history checkpoints
+        if self.config_loader.remove_history_checkpoints == True:
+            train_tool.remove_history_checkpoints(
+                self.config_loader.checkpoints_dir)
+            print("Remove history checkpoints....")
 
-            # save the checkpoint
-            self.checkpoint.save(file_prefix=self.checkpoint_prefix)
-            print("Store current checkpoint successfully....")
+        # save the checkpoint
+        self.checkpoint.save(file_prefix=self.checkpoint_prefix)
+        print("Store current checkpoint successfully....")
 
-    def on_test(self, current_epoch):
+        #将最终模型进行保存成h5文件格式，只保存最后一个
+        #目前只支持固定路径，无法配置
+        path="./model"
+        if os.path.exists(path)==False:
+             #重新创建文件夹
+            os.mkdir(path)
+       
+        #保存所有模型
+        for name in self.model_map:
+            model_path=os.path.join(path, "{}.h5".format(name))
+            self.model_map[name].save(model_path,overwrite=True, include_optimizer=False)
+            print("save {} model in HDFS file.".format(name))
+        
+        print("----------------------------------------------------------------------------------\n")
+            
+
+
+    def on_test_epoch(self, current_epoch, loss_set):
         """
         测试开始调用，允许重写
         默认不提供任何方法。
         """
         pass
+
+    def on_train(self):
+        """
+        训练开始调用，允许重写
+        默认完成以下任务：
+        1. 管理每一轮训练，每一轮训练调用on_train_epoch()
+        2. 每轮训练完，调用on_test_epoch()进行测试。
+        3. 每轮训练完，调用on_save_epoch()保存模型检查点。
+        """
+        # start training
+        print("Start training, epochs={}".format(self.config_loader.epoch))
+        # start from last time
+        print("Start from epoch={}".format(self.log_tool.current_epoch))
+        print("------------------------------------------------------------------\n")
+        for epoch in range(self.log_tool.current_epoch, self.config_loader.epoch+1):
+            # initial time
+            start = time.time()
+
+            # inovke each round
+            # train epoch
+            loss_set = self.on_train_epoch(epoch)
+
+            # 没过一个保存阶段就会调用一次该函数
+            if epoch % self.config_loader.save_period == 0:
+                # test epoch
+                self.on_test_epoch(epoch, loss_set)
+
+            # update epoch
+            self.log_tool.update_epoch()
+            print("Time taken for epoch {} is {} sec".format(
+                epoch, time.time() - start))
+            print("------------------------------------------------------------------\n")
+            # 保存，每个周期保存一次
+            if epoch % self.config_loader.save_period == 0:
+                self.on_save_epoch(epoch)
 
     def on_finish(self):
         """
@@ -113,28 +208,10 @@ class Container:
         print("Start prepare....")
         self.on_prepare()
 
-        # start training
-        print("Start training, epochs={}".format(self.config_loader.epoch))
-        # start from last time
-        print("Start from epoch={}".format(self.log_tool.current_epoch))
-        print("------------------------------------------------------------------\n")
-        for epoch in range(self.log_tool.current_epoch, self.config_loader.epoch+1):
-            # initial time
-            start = time.time()
+        print("Start training....")
+        self.on_train()
 
-            # inovke each round
-            # train epoch
-            self.on_train(epoch)
-            # test epoch
-            self.on_test(epoch)
-
-            # update epoch
-            self.log_tool.update_epoch()
-            print("Time taken for epoch {} is {} sec".format(
-                epoch, time.time() - start))
-            print("------------------------------------------------------------------\n")
-
-        print("Total Training process finished....")
+        print("Total training process finished....")
         print("Sweep up....")
         self.on_finish()
         print("Finished.")
@@ -149,11 +226,12 @@ def main(config_loader):
     # 名称是以点的形式创建，如：eidolon.pixel_container.PixelContainer
     # split the module name and class name
     split_list = config_loader.container.split(".")
-    
-    module_name=".".join(split_list[0:len(split_list)-1])
-    class_name=split_list[-1]
-    print("load container：model_name={}, class_name={}".format(module_name,class_name))
-    
+
+    module_name = ".".join(split_list[0:len(split_list)-1])
+    class_name = split_list[-1]
+    print("load container：model_name={}, class_name={}".format(
+        module_name, class_name))
+
     # load training function in train_watermark
     o = importlib.import_module(module_name)
     Container = getattr(o, class_name)

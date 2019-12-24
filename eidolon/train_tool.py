@@ -303,8 +303,12 @@ def parse_log(log_dir):
     return loss_map
 
 
-def paint_loss(log_dir, update_time=30):
+def paint_loss(log_dir, update_time=30, save=False):
     """
+    @update 2019.12.23
+    临时功能，若save=True，则不会显示而是直接保存。
+    词=此功能用于未安装图形界面的linux设备
+
     @update 2019.11.25
     Adding dymanic show panel. (under testing)
     使用plt.interactive交互技术，可以动态显示损失曲线，无需每次查看前手动重启程序

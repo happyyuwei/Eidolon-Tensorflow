@@ -23,7 +23,7 @@ def block(filters, size, activate=tf.keras.layers.ReLU(), apply_batchnorm=True):
 
     return result
 
-def Encoder():
+def Encoder(input_shape):
     """
     编码器 使用两个卷积块组成，分别为24通道和48通道。
     输入32*32*3
@@ -31,7 +31,7 @@ def Encoder():
     输出使用tanh激活
     """
     # 
-    inputs = tf.keras.layers.Input(shape=[32, 32, 3])
+    inputs = tf.keras.layers.Input(shape=input_shape)
 
     stack = [
         block(24, 3, apply_batchnorm=False),
@@ -48,15 +48,17 @@ def Encoder():
 
     return tf.keras.Model(inputs=inputs, outputs=x)
 
-def Decoder():
+def Decoder(input_shape):
     """
     解码器 使用两个卷积块组成，分别为24通道和3通道。
     输入32*32*48
     输出32*32*3
     输出使用tanh激活
     """
+    #无论输入宽高是多少，通道数始终是48
+    input_shape[2]=48
 
-    inputs = tf.keras.layers.Input(shape=[32, 32, 48])
+    inputs = tf.keras.layers.Input(shape=input_shape)
 
     stack = [
         block(24, 3),
