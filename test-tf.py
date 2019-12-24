@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-im=plt.imread("./WMNetv2/watermark/wm_binary.png")
+im=plt.imread("./WMNetv2/watermark/wm_binary_x64.png")[:,:,0:3]
 im[im<=0.5]=0
 im[im>0.5]=1
 temp=np.zeros(np.shape(im))

@@ -25,6 +25,7 @@ def block(filters, size, activate=tf.keras.layers.ReLU(), apply_batchnorm=True):
 
 def Encoder(input_shape):
     """
+    输入尺寸 e.g. [64,64,3]
     编码器 使用两个卷积块组成，分别为24通道和48通道。
     输入32*32*3
     输出32*32*48

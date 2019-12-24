@@ -131,6 +131,14 @@ class PixelContainer(train.Container):
         # 返回损失
         return result_set
 
+    def on_trainable_variables(self):
+        """
+        自定义训练的参数，允许重写。
+        """
+        return self.generator.trainable_variables
+
+        
+
     @tf.function
     def on_train_batch(self, input_image, target):
         """
@@ -147,9 +155,12 @@ class PixelContainer(train.Container):
         # 生成网络损失
         total_gen_loss = loss_set["total_gen_loss"]
 
+        #获取可训练的梯度
+        generator_variables=self.on_trainable_variables()
+
         # 梯度求解
         generator_gradients = gen_tape.gradient(total_gen_loss,
-                                                self.generator.trainable_variables)
+                                                generator_variables)
         # 优化网络参数
         self.generator_optimizer.apply_gradients(zip(generator_gradients,
                                                      self.generator.trainable_variables))

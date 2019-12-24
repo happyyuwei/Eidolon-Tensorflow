@@ -1,7 +1,8 @@
 import os
 import sys
-import numpy as np
+import math
 
+import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
@@ -27,30 +28,29 @@ class Model:
 
 class EncoderDecoder(Model):
 
-    def __init__(self, model_path, key_enable=False):
+    def __init__(self,  model_path, input_shape=[64,64],key_enable=False):
         super(EncoderDecoder, self).__init__(model_path)
 
         self.key_enable=key_enable
 
-        print("load encoder....")
-        self.encoder = auto.Encoder()
-        print("load decoder....")
-        self.decoder = auto.Decoder()
+        # print("load encoder....")
+        # self.encoder = auto.Encoder(input_shape)
+        # print("load decoder....")
+        # self.decoder = auto.Decoder(input_shape)
 
         if key_enable == True:
             print("load key encoder....")
-            self.key_encoder = auto.Encoder()
+            self.key_encoder = auto.Encoder(input_shape,)
 
-        # initial optimizer
-        print("initial optimizer....")
-        # optimzer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        self.encoder=tf.keras.models.load_model(os.path.join(model_path,"encoder.h5"))
+        self.decoder=tf.keras.models.load_model(os.path.join(model_path,"decoder.h5"))
 
-        checkpoint = tf.train.Checkpoint()
-        model_map={
-            # "optimzer":optimzer,
-            "encoder":self.encoder,
-            "decoder":self.decoder
-        }
+        # checkpoint = tf.train.Checkpoint()
+        # model_map={
+        #     # "optimzer":optimzer,
+        #     "encoder":self.encoder,
+        #     "decoder":self.decoder
+        # }
 
     
         # load trained model
@@ -58,9 +58,9 @@ class EncoderDecoder(Model):
             #
             pass
 
-        checkpoint.mapped = model_map
-        print("load model....")
-        checkpoint.restore(tf.train.latest_checkpoint(model_path))
+        # checkpoint.mapped = model_map
+        # print("load model....")
+        # checkpoint.restore(tf.train.latest_checkpoint(model_path))
 
     def decode_from_image(self, encode_image_path, secret_key_path=None):
 
@@ -69,8 +69,10 @@ class EncoderDecoder(Model):
         # change scale to [-1,1]
         encode_image = encode_image[:, :, 0:3] * 2 - 1
 
+        h,w,c=np.shape(encode_image)
+
         # reshape to 4 dim
-        encode_image = tf.reshape(encode_image, [1, 128, 128, 3])
+        encode_image = tf.reshape(encode_image, [1, h, w, 3])
 
         secret_key=None
         if self.key_enable==True:
@@ -104,7 +106,9 @@ class EncoderDecoder(Model):
 
         """
         # the encode_image is [1, 128,128,3], reshape to [1, 32,32,48]
-        encode_image = tf.reshape(encode_image, [1, 32, 32, 48])
+        _,h,w,_=np.shape(encode_image)
+        w=int(math.sqrt(h*w*3/48))
+        encode_image = tf.reshape(encode_image, [1, w, w, 48])
 
         if self.key_enable == True:
              # 秘钥特征
@@ -127,14 +131,19 @@ class EncoderDecoder(Model):
         encode_image = plt.imread(input_path)
         # change scale to [-1,1], only get 3 channels
         encode_image = encode_image[:, :, 0:3] * 2 - 1
+        
+        h, w, _=np.shape(encode_image)
 
-        # the input should be [1,32,32,1]
+        # the input should be [1,32,32,3]
         # reshape to 4 dim
-        encode_image = tf.reshape(encode_image, [1, 32, 32, 3])
+        encode_image = tf.reshape(encode_image, [1, h, w, 3])
         # encode, shape [1,32,32,48]
         encode_image = self.encoder(encode_image, training=True)
+
+        w=int(math.sqrt(w*h*48/3))
+
         # reshape to [1,128,128,3]
-        encode_image = tf.reshape(encode_image, [1, 128, 128, 3])
+        encode_image = tf.reshape(encode_image, [1, w, w, 3])
         # back to [0,1]
         encode_image = encode_image[0]*0.5+0.5
         # return numpy
@@ -265,7 +274,7 @@ if __name__ == "__main__":
 
     # start model
     # model = EncoderDecoder("./trained_models/auto_mnist")
-    model = EncoderDecoder("./trained_models/auto_mnist", key_enable=False)
+    model = EncoderDecoder("./trained_models/models/auto_mnist_x64/", key_enable=False)
 
     # # get feature
     # wm_feature = model.encode("wm_binary.png")
@@ -274,9 +283,9 @@ if __name__ == "__main__":
     # plt.imsave("wm_binary_feature.png", wm_feature)
 
     # decode feature
-    wm = model.decode_from_image("./WMNetv2/watermark/2.png")
+    wm = model.decode_from_image("./WMNetv2/watermark/wm_binary_feature_x64.png")
 
-    # f=model.encode("./WMNetv2/watermark/wm_binary.png")  
+    # f=model.encode("./WMNetv2/watermark/wm_binary_x64.png")  
 
     wm[wm < 0.5] = 0
     wm[wm > 0.5] = 1
@@ -284,4 +293,4 @@ if __name__ == "__main__":
     # show watermark
     plt.imshow(wm)
     plt.show()
-    # plt.imsave("x.png", f)
+    # plt.imsave("./WMNetv2/watermark/wm_binary_feature_x64.png", f)

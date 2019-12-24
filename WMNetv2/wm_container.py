@@ -11,8 +11,7 @@ from eidolon import train_tool
 from eidolon import loss_util
 
 from WMNetv2.extractor import Extractor
-from model_use import EncoderDecoder
-
+from WMNetv2.model_use import EncoderDecoder
 
 
 class WMContainer(pixel_container.PixelContainer):
@@ -50,6 +49,10 @@ class WMContainer(pixel_container.PixelContainer):
         # 解码器
         self.decoder_path = args_parser.get("decoder")
 
+        # 水印
+        self.wm_path=args_parser.get("wm_path")
+        
+
         # training noise attack
         self.noise_attack = args_parser.get("noise") in ("True", "true")
         print("noise attack:{}".format(self.noise_attack))
@@ -66,12 +69,12 @@ class WMContainer(pixel_container.PixelContainer):
         self.model_map["extractor"] = self.extractor
 
         # load watermark
-        self.watermark_target = train_tool.read_image(
-            "./watermark.png", self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
+        self.watermark_target = train_tool.read_image(self.wm_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
         print("load watermark successfully...")
 
         # create negitive. if no watermark, a 1 matrix will be out
-        self.negitive_target = tf.zeros(shape=[1, 128, 128, 3])*1
+        self.negitive_target = tf.zeros(
+            shape=[1, self.config_loader.image_width, self.config_loader.image_height, 3])*1
         print("create negative watermark successfully...")
 
         # the pretrained encoder-decoder model
@@ -88,7 +91,10 @@ class WMContainer(pixel_container.PixelContainer):
         """
         计算损失函数，继承父类，在此基础上加上水印损失
         """
+        # 计算任务损失函数
         result_set = super(WMContainer, self).compute_loss(input_image, target)
+
+        #开始计算水印损失函数
 
         # no attack
         gen_output = result_set["gen_output"]
@@ -135,6 +141,70 @@ class WMContainer(pixel_container.PixelContainer):
         result_set["loss_set"]["total_gen_loss"] = result_set["loss_set"]["total_gen_loss"] + \
             watermark_total_loss
 
-    
+        return result_set
 
+    #训练直接复用父类代码
+    def on_trainable_variables(self):
+        return self.generator.trainable_variables + self.extractor.trainable_variables
+
+    def test_visual(self):
+        """
+        视觉测试，在测试集上选择一个结果输出可视图像
+        复用部分父类代码，再加上输出水印的可见效果
+        """
+        image_list, title_list=super(WMContainer,self).test_visual()
+        
+        gen_output=image_list[2]
+        ground_truth=image_list[1]
+        #输出水印
+        # extract positive feature
+        extract_watermark_feature = self.extractor(
+            gen_output, training=True)
+
+        # extract negative feature
+        extract_negative_feature = self.extractor(
+            ground_truth, training=True)
+
+        # extarct watermark
+        extract_watermark = self.decoder_model.decode(
+            extract_watermark_feature)
+        # extract negative
+        extract_negative = self.decoder_model.decode(
+            extract_negative_feature)
+        
+        #添加到输出
+        image_list.append(extract_watermark_feature)
+        image_list.append(extract_negative_feature)
+        image_list.append(extract_watermark)
+        image_list.append(extract_negative)
+
+        #添加标题
+        title_list.append("WF+")
+        title_list.append("WF-")
+        title_list.append("E+")
+        title_list.append("E-")
     
+        return image_list, title_list
+
+
+    def test_metrics(self, loss_set):
+        wm_mean_error = 0
+        count = 0
+        for _,(test_input_image, _) in self.test_dataset.enumerate():
+            # 输入
+            test_output_image = self.generator(test_input_image, training=True)
+            # calcluate watermark feature me in the test data
+            test_extract_watermark = self.extractor(
+                test_output_image, training=True)
+            wm_mean_error = wm_mean_error + \
+                tf.reduce_mean(
+                    tf.abs(test_extract_watermark-self.watermark_target))
+            count = count+1
+
+        # mean
+        wm_mean_error = wm_mean_error/count
+        loss_set["wm_error"]=wm_mean_error
+
+        return loss_set
+
+
