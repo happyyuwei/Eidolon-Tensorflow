@@ -59,7 +59,7 @@ class Container:
         # 创建checkpoint
         self.checkpoint = tf.train.Checkpoint()
 
-        # 创建映射
+        # 创建映射，将model_map和optimze_map整合成一个map，使得chekcpoint能够将其全部保存
         ckpt_map = {}
         ckpt_map.update(self.model_map)
         ckpt_map.update(self.optimize_map)

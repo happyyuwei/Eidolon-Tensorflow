@@ -199,7 +199,7 @@ class LogTool:
         print("Tensorboard enable: {}".format(tensorboard_enable))
         if tensorboard_enable == True:
             self.tensorboard = tf.summary.create_file_writer(
-                os.path.join(self.train_log_dir, "tensorboard"))
+                os.path.join(self.log_dir, "tensorboard"))
 
     def save_image_list_tensorboard(self, image_list, title_list):
         """

@@ -235,6 +235,9 @@ class ArgsParser:
     """
 
     def __init__(self, args):
+        """
+        传入带解析的args数组
+        """
         # 传入的args是字符串
         self.args_dict = {}
 
