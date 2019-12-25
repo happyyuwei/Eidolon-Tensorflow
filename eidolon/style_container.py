@@ -44,22 +44,44 @@ class StyleContainer(PixelContainer):
             self.activate_list.append(tf.keras.Model(
                 inputs=vgg_16.input, outputs=vgg_16.layers[id].output))
 
+        #由于风格图像给定，每一层特征就给定，可以提前计算
+        #直接计算gram举证
+        self.style_feature_list=[]
+        for activate in self.activate_list:
+            self.style_feature_list.append(self.gram(activate(self.style_image)))
+
         # 执行父类方法
         super(StyleContainer, self).on_prepare()
+
+    def gram(self, mat):
+        """
+        格拉姆举证
+        """
+        return tf.matmul(mat,tf.transpose(mat))
 
     def style_loss(self, image):
         """
         风格损失，计算图像每一个激活层的Grim矩阵
         """
+        loss=0
+        #多层的损失
+        for i in range(len(self.activate_list)):
+            #提取特征
+            image_style=self.activate_list[i](image)
+            #计算风格损失
+            loss=loss+tf.reduce_mean(tf.square(self.gram(image_style)-self.style_feature_list[i]))
+        
+        return loss
 
     
     def content_loss(self, image, target):
         """
         内容损失,只计算第7层（下标6）的特征,存在列表第二个位置
         """
-        image_feature=self.activate_list[2]
+        image_feature=self.activate_list[2](image)
+        target_feature=self.activate_list[2](target)
 
-
+        return tf.reduce_mean(tf.square(image_feature-target_feature))
 
 
     def compute_loss(self, input_image, target):
@@ -74,3 +96,15 @@ class StyleContainer(PixelContainer):
 
         #计算内容损失
         content_loss=self.content_loss(gen_output, target)
+
+        #总损失
+        loss= style_loss+0.8*content_loss
+
+        #损失集合
+        loss_set={
+            "total_gen_loss":loss,
+            "style_loss":style_loss,
+            "content_loss":content_loss
+        }
+
+        return loss_set

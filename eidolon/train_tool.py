@@ -1,6 +1,10 @@
+#third part lib
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+
+#system lib
 import os
 import time
 import math
@@ -19,6 +23,11 @@ IMAGE_BINARY = "binary"
 def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
     """
     a general function to save image tensor, the tensor dim is [1,height,width,3] with pixel [0,1]
+
+    @update 2019.12.25
+    该函数底层调用plt.imsave()函数保存图片，在linux上大量保存存在不稳定的情况，Runtime Error, libpng signaled error.
+    尚未找出原因，目前尝试换成PIL库保存。
+
     @since 2019.9.12
     @author yuwei
     :param image_tensor:
@@ -69,8 +78,11 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
         drawable = temp
 
     # save
-    plt.imsave(file, drawable)
-    # plt.close()
+    # plt.imsave(file, drawable)
+    #跟换PIL库保存图片
+    drawable=drawable*255
+    img = Image.fromarray(drawable.astype('uint8'))
+    img.save(file,"png")
 
 
 def save_images(image_list, title_list, image_dir, seq=""):

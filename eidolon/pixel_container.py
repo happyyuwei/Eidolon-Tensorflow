@@ -85,7 +85,9 @@ class PixelContainer(train.Container):
     def compute_loss(self, input_image, target):
         """
         计算输出图片与目标的损失函数
-        返回损失函数
+        返回损失
+        返回必须是一个字典，包含loss_set关键字，
+        其中loss_set也是一个字典，包含total_gen_loss关键字，该关键字为总损失。
         """
         # 计算生成网络输出图像
         gen_output = self.generator(input_image, training=True)

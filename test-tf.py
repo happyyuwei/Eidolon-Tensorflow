@@ -13,22 +13,35 @@ import matplotlib.pyplot as plt
 # plt.imsave("y.png",temp)
 
 import tensorflow as tf
-from tensorflow.keras.applications.vgg16 import VGG16
+# from tensorflow.keras.applications.vgg16 import VGG16
 
-model = VGG16(weights='imagenet', include_top=False)
+# model = VGG16(weights='imagenet', include_top=False)
 
-img=plt.imread("C:\\Users\\happy\\Downloads\\1.png")[:,:,0:3]
-img=tf.reshape(img,[1,256,256,3])
-# img=tf.image.resize(img,[224,224])
+# img=plt.imread("C:\\Users\\happy\\Downloads\\1.png")[:,:,0:3]
+# img=tf.reshape(img,[1,256,256,3])
+# # img=tf.image.resize(img,[224,224])
 
-# print(model.layers)
-# model.summary()
+# # print(model.layers)
+# # model.summary()
 
-# layer_outputs=[layer.output for layer in model.layers[0:3]]
-# # print(layer_outputs)
+# # layer_outputs=[layer.output for layer in model.layers[0:3]]
+# # # print(layer_outputs)
 
-m1=tf.keras.Model(inputs=model.input, outputs=model.layers[18].output)
-m1.summary()
-o=m1(img)
-plt.imshow(o[0,:,:,61:64])
-plt.show()
+# m1=tf.keras.Model(inputs=model.input, outputs=model.layers[18].output)
+# m1.summary()
+# o=m1(img)
+# plt.imshow(o[0,:,:,61:64])
+# plt.show()
+
+from eidolon import train_tool
+
+s=plt.imread("C:\\Users\\happy\\Downloads\\1.jpg")
+s=s/255
+h,w,c=np.shape(s)
+x=np.zeros([1,h,w,c])
+x[0]=s
+# plt.imshow(s)
+# plt.show()
+# print(x)
+# s=s*2-1
+train_tool.save_image(x,"1.png")
