@@ -32,7 +32,7 @@ default_config = {
             "desc": "训练时一次输入的图片张数，在生成网络训练中，推荐每次输入一张图像。"
         },
         "image_size": {
-            "value": [128, 128, 3],
+            "value": [256, 256, 3],
             "desc": "输入图像的尺寸，依次为：宽、高、通道。数据集中所有图像会裁剪成该尺寸。（注意：多余通道会被直接忽略）。"
         },
         "image_type": {
@@ -57,7 +57,7 @@ default_config = {
         }
     },
     "training": {
-        "keys": ["epoch", "save_period", "data_dir", "checkpoints_dir", "log_dir", "training_device", "remove_history_checkpoints", "load_latest_checkpoints"],
+        "keys": ["epoch", "save_period", "data_dir", "checkpoints_dir", "log_dir", "tensorboard_enable", "training_device", "remove_history_checkpoints", "load_latest_checkpoints"],
         "container": {
             "value": "eidolon.pixel_container.PixelContainer",
             "desc": "定义训练使用的容器。容器用于管理整个训练的生命周期。"
@@ -71,7 +71,7 @@ default_config = {
             "desc": "保存周期。每过一个保存周期，将会保存训练的检查点以及记录训练日志。"
         },
         "data_dir": {
-            "value": "./data/",
+            "value": "../../data/",
             "desc": "训练数据集所在路径，相对位置为当前应用app所在位置。"
         },
         "checkpoints_dir": {
@@ -81,6 +81,10 @@ default_config = {
         "log_dir": {
             "value": "./log/",
             "desc": "保存训练日志路径，相对位置为当前应用app所在位置。"
+        },
+        "tensorboard_enable": {
+            "value": False,
+            "desc": "启用tensorboard记录日志。可以使用tensorboard在页面查看训练情况。"
         },
         "training_device": {
             "value": "default",
@@ -199,6 +203,8 @@ class ConfigLoader:
             self.checkpoints_dir = self.config["training"]["checkpoints_dir"]["value"]
             # log dir
             self.log_dir = self.config["training"]["log_dir"]["value"]
+            #tensorboard enable
+            self.tensorboard_enable=self.config["training"]["tensorboard_enable"]["value"]
             # training device
             self.training_device = self.config["training"]["training_device"]["value"]
             # remove history

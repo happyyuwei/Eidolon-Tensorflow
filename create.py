@@ -32,6 +32,13 @@ def create_train_bootstrap(running_script):
         cmd = [run_cmd+"\n"]
         with open("train.sh", "w") as f:
             f.writelines(cmd)
+        
+        # linux下生成脚本需要提权
+        #@update 2019.12.24
+        #@author yuwei
+        #自动提权
+        import stat
+        os.chmod("train.sh",stat.S_IRWXU)
     else:
         print("Error: System: {} is not supported currently.".format(system))
         sys.exit()
@@ -92,7 +99,7 @@ def create_app(app_name, running_script, conf):
     with open("paint_loss.bat", "w") as f:
         f.writelines(["python ../../paint_loss.py"])
 
-    return "create app successfully, name={}, script={}, confing={}".format(app_name, running_script, conf)
+    return "create app successfully, name={}, script={}, config={}".format(app_name, running_script, conf)
 
 
 

@@ -28,7 +28,7 @@ class Container:
 
         # 初始化日志工具
         self.log_tool = train_tool.LogTool(
-            log_dir=config_loader.log_dir, save_period=config_loader.save_period)
+            log_dir=config_loader.log_dir, save_period=config_loader.save_period, tensorboard_enable=config_loader.tensorboard_enable)
         print("Initial train log....")
 
         # 初始化检查点路径
@@ -49,7 +49,6 @@ class Container:
         """
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
-    
 
     def on_prepare(self):
         """
@@ -61,11 +60,11 @@ class Container:
         self.checkpoint = tf.train.Checkpoint()
 
         # 创建映射
-        ckpt_map={}
+        ckpt_map = {}
         ckpt_map.update(self.model_map)
         ckpt_map.update(self.optimize_map)
 
-        #设置映射至checkpoint
+        # 设置映射至checkpoint
         self.checkpoint.mapped = ckpt_map
         print("Initial checkpoint....")
         model_list_name = []
@@ -130,22 +129,21 @@ class Container:
         self.checkpoint.save(file_prefix=self.checkpoint_prefix)
         print("Store current checkpoint successfully....")
 
-        #将最终模型进行保存成h5文件格式，只保存最后一个
-        #目前只支持固定路径，无法配置
-        path="./model"
-        if os.path.exists(path)==False:
-             #重新创建文件夹
+        # 将最终模型进行保存成h5文件格式，只保存最后一个
+        # 目前只支持固定路径，无法配置
+        path = "./model"
+        if os.path.exists(path) == False:
+             # 重新创建文件夹
             os.mkdir(path)
-       
-        #保存所有模型
-        for name in self.model_map:
-            model_path=os.path.join(path, "{}.h5".format(name))
-            self.model_map[name].save(model_path,overwrite=True, include_optimizer=False)
-            print("save {} model in HDFS file.".format(name))
-        
-        print("----------------------------------------------------------------------------------\n")
-            
 
+        # 保存所有模型
+        for name in self.model_map:
+            model_path = os.path.join(path, "{}.h5".format(name))
+            self.model_map[name].save(
+                model_path, overwrite=True, include_optimizer=False)
+            print("save {} model in HDFS file.".format(name))
+
+        print("----------------------------------------------------------------------------------\n")
 
     def on_test_epoch(self, current_epoch, loss_set):
         """

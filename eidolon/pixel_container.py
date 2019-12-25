@@ -159,11 +159,9 @@ class PixelContainer(train.Container):
         generator_variables=self.on_trainable_variables()
 
         # 梯度求解
-        generator_gradients = gen_tape.gradient(total_gen_loss,
-                                                generator_variables)
+        generator_gradients = gen_tape.gradient(total_gen_loss, generator_variables)
         # 优化网络参数
-        self.generator_optimizer.apply_gradients(zip(generator_gradients,
-                                                     generator_variables))
+        self.generator_optimizer.apply_gradients(zip(generator_gradients, generator_variables))
         # 只有当使用判决器时，才需要优化判决器
         if self.config_loader.discriminator != "no":
             # 判决网络损失

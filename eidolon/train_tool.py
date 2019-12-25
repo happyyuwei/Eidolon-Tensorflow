@@ -144,7 +144,7 @@ def parse_last_epoch(file):
         with open(file, "r") as f:
             lines = f.readlines()
             # 修复读取空文件报错的bug
-            #@since 201.912.21
+            # @since 201.912.21
             if len(lines) == 0:
                 return 0
             else:
@@ -159,13 +159,24 @@ actually, log epoch must be vary instead of 1
 @since 2019.1.17
 
 """
+
+
 class LogTool:
 
-    def __init__(self, log_dir, save_period):
+    def __init__(self, log_dir, save_period, tensorboard_enable=False):
         """
         initial directionary
+        负责管理整个训练系统的记录
+        目前支持默认文本方式记录，与tensorboard方式记录。
+        用户可以选择启用或者禁用tensorboard方式记录，而文本方式记录无法禁用。
+        目前默认将tensorboard日志记录在日志目录的tensorboard文件夹中
+        @update 2019.12.24
+        @author yuwei
+        支持以tensorboard的规定格式输出
+
         :param log_dir:
         :param save_period
+        :param tensorboard_enable
         """
         self.log_dir = log_dir
         self.save_period = save_period
@@ -182,38 +193,39 @@ class LogTool:
         # @author yuwei
         self.current_epoch = parse_last_epoch(self.train_log_dir) + 1
 
-    def save_image(self, model, test_input, tar):
-        """
-        save the images independently, instead of saving in an figure by plt
-        these images will be shown by log server on other remote devices, such as a browser
-        :param model:
-        :param test_input:
-        :param tar:
-        :return:
-        """
-        # get image from -0.5,0.5
-        prediction = model(test_input, training=True)
-        # the title indicate the input image, ground truth and prediction
+        # beta @since 2019.12.24 支持tensorboard
+        # 目前默认将tensorboard日志记录在日志目录的tensorboard文件夹中
+        self.tensorboard_enable=tensorboard_enable
+        print("Tensorboard enable: {}".format(tensorboard_enable))
+        if tensorboard_enable == True:
+            self.tensorboard = tf.summary.create_file_writer(
+                os.path.join(self.train_log_dir, "tensorboard"))
 
-        # this is the same situation in save_image_plt
-        if np.array(tf.shape(test_input))[3] == 3:
-            display_list = [test_input[0], tar[0], prediction[0]]
-            title = ['IN1', 'GT', 'PR']
-        else:
-            display_list = [test_input[0, :, :, 0:3],
-                            test_input[0, :, :, 3:6], tar[0], prediction[0]]
-            title = ['IN1', "IN2", 'GT', 'PR']
+    def save_image_list_tensorboard(self, image_list, title_list):
+        """
+        调用 tensorflow 的tf.summary.image保存测试图片
+        需要使用tensorboard在网页端查看输出内容。
+        @since 2019.12.24
+        @ author yuwei
+        """
+        # 测试支持tensorflow
+        with self.tensorboard.as_default():
+            for i in range(len(title_list)):
+                # The input image of tensorboard is 4 dim, the first dim is batch.
+                # by default,at most 3 images in a batch will be shown
+                tf.summary.image(
+                    title_list[i], image_list[i]*0.5+0.5, step=self.current_epoch)
 
-        for i in range(len(title)):
-            # switch the list to [0,1]
-            drawable = np.array(display_list[i] * 0.5 + 0.5)
-            drawable[drawable < 0] = 0
-            drawable[drawable > 1] = 1
-            # save dir
-            dir = os.path.join(self.image_dir, str(
-                self.current_epoch) + "_" + title[i] + ".png")
-            plt.imsave(dir, drawable)
-            plt.close()
+    def save_loss_tensorboard(self, loss_set):
+        """
+        使用tensorboard保存损失函数，调用tf.summary.scalar()
+        可以使用tensorboard在网页端查看变化曲线
+        """
+        # 测试支持tensorboard
+        with self.tensorboard.as_default():
+            for key in loss_set:
+                tf.summary.scalar(
+                    key, data=loss_set[key], step=self.current_epoch)
 
     def save_image_list(self, image_list, title_list):
         """
@@ -225,7 +237,9 @@ class LogTool:
         :param title_list:
         :return:
         """
-        save_images(image_list, title_list, self.image_dir, self.current_epoch)
+        if self.tensorboard_enable==True:
+            save_images(image_list, title_list, self.image_dir, self.current_epoch)
+        
 
     def save_loss(self, loss_set):
         """
@@ -248,10 +262,15 @@ class LogTool:
                                                       time.strftime("%b-%d-%Y-%H:%M:%S", time.localtime()), content)
             # change line
             f.writelines(line)
+        
+        if self.tensorboard_enable==True:
+            self.save_loss_tensorboard(loss_set)
+
 
     def plot_model(self, model, model_name):
         """
         绘画模型结构,需要安装pydot.
+        模型会保存在日志文件的更目录下。
         """
         """
         需要注意参数rankdir，官方解释如下：
@@ -259,10 +278,9 @@ class LogTool:
         a string specifying the format of the plot: 'TB' creates a vertical plot; 
         'LR' creates a horizontal plot.
         """
-        file=os.path.join(self.log_dir,"{}.png".format(model_name))
-        tf.keras.utils.plot_model(model, to_file=file, show_shapes=True, rankdir="TB", dpi=64)
-
-
+        file = os.path.join(self.log_dir, "{}.png".format(model_name))
+        tf.keras.utils.plot_model(
+            model, to_file=file, show_shapes=True, rankdir="TB", dpi=64)
 
     def update_epoch(self):
         """
@@ -305,9 +323,10 @@ def parse_log(log_dir):
 
 def paint_loss(log_dir, update_time=30, save=False):
     """
-    @update 2019.12.23
+    @update 2019.12.24
     临时功能，若save=True，则不会显示而是直接保存。
-    词=此功能用于未安装图形界面的linux设备
+    此功能用于未安装图形界面的linux设备。
+    再一次吐槽plt的实时显示功能鸡肋，完全不符合前端展示的理念。
 
     @update 2019.11.25
     Adding dymanic show panel. (under testing)
@@ -334,22 +353,41 @@ def paint_loss(log_dir, update_time=30, save=False):
 
     # paint
     plt.figure("Loss")
-    plt.ion()
-    while True:
-        num = 1
-        for key in loss_map:
-            # locate
-            ax = plt.subplot(row, col, num)
-            plt.title(key)
-            # paint
-            ax.plot(loss_map[key], "b")
-            num = num + 1
-            # update map every 30s
-            loss_map = parse_log(log_dir)
-        plt.pause(update_time)
-    # display
-    plt.ioff()
-    plt.show()
+    # 如设置为不保存，则直接实时动态显示损失曲线
+    if save==False:
+        plt.ion()
+        while True:
+            num = 1
+            for key in loss_map:
+                # locate
+                ax = plt.subplot(row, col, num)
+                plt.title(key)
+                # paint
+                ax.plot(loss_map[key], "b")
+                num = num + 1
+                # update map every 30s
+                loss_map = parse_log(log_dir)
+            plt.pause(update_time)
+        # display
+        plt.ioff()
+        plt.show()
+    else:
+        #若设置保存，则不会显示，而是直接保存成图片。
+        while True:
+            num = 1
+            for key in loss_map:
+                # locate
+                ax = plt.subplot(row, col, num)
+                plt.title(key)
+                # paint
+                ax.plot(loss_map[key], "b")
+                num = num + 1
+                # update map every 30s
+                loss_map = parse_log(log_dir)
+            #默认保存在应用目录的loss.png下，会自动覆盖。
+            plt.savefig("loss.png")
+            print("update...")
+            time.sleep(update_time)
 
 
 def remove_history_checkpoints(dir):
