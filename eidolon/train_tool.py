@@ -249,8 +249,9 @@ class LogTool:
         :param title_list:
         :return:
         """
+        save_images(image_list, title_list, self.image_dir, self.current_epoch)
         if self.tensorboard_enable==True:
-            save_images(image_list, title_list, self.image_dir, self.current_epoch)
+            self.save_image_list_tensorboard(image_list,title_list)
         
 
     def save_loss(self, loss_set):

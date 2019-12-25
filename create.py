@@ -4,6 +4,7 @@ import sys
 import getopt
 import shutil
 import platform
+import stat
 
 #inner lib
 from eidolon import config
@@ -37,7 +38,6 @@ def create_train_bootstrap(running_script):
         #@update 2019.12.24
         #@author yuwei
         #自动提权
-        import stat
         os.chmod("train.sh",stat.S_IRWXU)
     else:
         print("Error: System: {} is not supported currently.".format(system))
@@ -64,6 +64,21 @@ def create_config_bootstrap(app_name):
     with open("config.bat", "w") as f:
         f.writelines(invisible_cmd)
         f.writelines([run_cmd])
+
+    
+def create_paint_loss_bootstrap():
+    # 检查当前系统，如果是winsows系统，则生成bat; 如果是linux系统，则生成sh
+    system = platform.system()
+
+    if system == "Windows":
+        file_name="paint_loss.bat"
+    else:
+        file_name="paint_loss.sh"
+
+    with open(file_name, "w") as f:
+        f.writelines(["python ../../paint_loss.py"])
+    #自动提权
+    os.chmod("paint_loss.sh",stat.S_IRWXU)
 
 
 def create_app(app_name, running_script, conf):
@@ -96,8 +111,7 @@ def create_app(app_name, running_script, conf):
     # create config.bat
     create_config_bootstrap(app_name)
     # create paint script paint_loss.bat
-    with open("paint_loss.bat", "w") as f:
-        f.writelines(["python ../../paint_loss.py"])
+    create_paint_loss_bootstrap()
 
     return "create app successfully, name={}, script={}, config={}".format(app_name, running_script, conf)
 

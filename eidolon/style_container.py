@@ -41,8 +41,13 @@ class StyleContainer(PixelContainer):
         self.activate_list = []
         # 生成各个激活层
         for id in activate_id:
-            self.activate_list.append(tf.keras.Model(
-                inputs=vgg_16.input, outputs=vgg_16.layers[id].output))
+            model=tf.keras.Model(
+                inputs=vgg_16.input, outputs=vgg_16.layers[id].output)
+            #需要将模型设置成不可训练，（若使用keras编译，则必须设置，
+            # 但使用tensorflow自定义训练，个人认为只要不把trainable_variable传递过去就不会进行训练（尚未验证））
+            model.trainable=False
+            
+            self.activate_list.append(model)
 
         #由于风格图像给定，每一层特征就给定，可以提前计算
         #直接计算gram举证
