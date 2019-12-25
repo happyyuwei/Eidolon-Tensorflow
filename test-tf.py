@@ -24,10 +24,10 @@ img=tf.reshape(img,[1,256,256,3])
 # print(model.layers)
 # model.summary()
 
-layer_outputs=[layer.output for layer in model.layers[0:3]]
-# print(layer_outputs)
+# layer_outputs=[layer.output for layer in model.layers[0:3]]
+# # print(layer_outputs)
 
-m1=tf.keras.Model(inputs=model.input, outputs=model.layers[2].output)
+m1=tf.keras.Model(inputs=model.input, outputs=model.layers[18].output)
 m1.summary()
 o=m1(img)
 plt.imshow(o[0,:,:,61:64])

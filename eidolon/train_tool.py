@@ -49,7 +49,7 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
         drawable = drawable/3
         level = (min+max)/2
         # filter
-        drawable[drawable > level] = 1
+        drawable[drawable >= level] = 1
         drawable[drawable < level] = 0
         temp = np.zeros([height, width, 3])
         temp[:, :, 0] = drawable
@@ -70,7 +70,7 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
 
     # save
     plt.imsave(file, drawable)
-    plt.close()
+    # plt.close()
 
 
 def save_images(image_list, title_list, image_dir, seq=""):
