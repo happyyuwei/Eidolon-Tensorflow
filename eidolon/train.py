@@ -9,6 +9,7 @@ from eidolon import loader
 import os
 import time
 import importlib
+import datetime
 
 
 class Container:
@@ -164,8 +165,11 @@ class Container:
         print("Start training, epochs={}".format(self.config_loader.epoch))
         # start from last time
         print("Start from epoch={}".format(self.log_tool.current_epoch))
-        print("------------------------------------------------------------------\n")
         for epoch in range(self.log_tool.current_epoch, self.config_loader.epoch+1):
+            print("------------------------------------------------------------------\n")
+            #reocrd current time
+            print("start epoch {} at time: {}\n".format(
+                epoch, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             # initial time
             start = time.time()
 
@@ -242,7 +246,17 @@ def main(config_loader):
     else:
         # 在指定设备中运行
         print("Use device: {} ....".format(config_loader.training_device))
-        # 设置可见cuda
-        os.environ["CUDA_VISIBLE_DEVICES"]="7"
-        with tf.device(config_loader.training_device):
+
+        #若允许只是用一块GPU内存
+        if config_loader.training_device.endswidth("-only"):
+            # parse device id
+            device_id=config_loader.training_device.split("-")[0].split(":")[1]
+            # 把其他显卡设成不可见
+            os.environ["CUDA_VISIBLE_DEVICES"]=device_id
+
+            #启动生命周期
             container.lifecycle()
+        else:
+            # 默认占用所有GPU内存
+            with tf.device(config_loader.training_device):
+                container.lifecycle()

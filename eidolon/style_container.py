@@ -119,7 +119,7 @@ class StyleContainer(PixelContainer):
         content_loss=self.content_loss(gen_output, target)
 
         #总损失
-        loss= 10*style_loss+content_loss
+        loss= 100*style_loss+content_loss
 
         #损失集合
         loss_set={
@@ -127,7 +127,6 @@ class StyleContainer(PixelContainer):
             "style_loss":style_loss,
             "content_loss":content_loss
         }
-        print(loss_set)
 
         return {
             "loss_set":loss_set

@@ -88,7 +88,7 @@ default_config = {
         },
         "training_device": {
             "value": "default",
-            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：CPU:0，GPU:0。若使用默认设备，输入default"
+            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：CPU:0，GPU:0。若使用默认设备，输入default。注意：tensorflow默认会占用所有显卡的内存，因此规定仅仅使用某一块显卡，请指定-only,如：GPU:7-only"
         },
         "remove_history_checkpoints": {
             "value": True,
