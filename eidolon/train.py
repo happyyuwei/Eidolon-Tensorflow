@@ -243,6 +243,6 @@ def main(config_loader):
         # 在指定设备中运行
         print("Use device: {} ....".format(config_loader.training_device))
         # 设置可见cuda
-        os.environ["CUDA_VISIBLE_DEVICES"]=config_loader.training_device.split(":")[1]
+        os.environ["CUDA_VISIBLE_DEVICES"]="7"
         with tf.device(config_loader.training_device):
             container.lifecycle()

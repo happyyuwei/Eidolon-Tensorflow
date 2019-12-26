@@ -96,10 +96,10 @@ class StyleContainer(PixelContainer):
     
     def content_loss(self, image, target):
         """
-        内容损失,只计算第7层（下标6）的特征,存在列表第二个位置
+        内容损失,只计算第7层（下标6）的特征,存在列表第二个位置，下标1
         """
-        image_feature=self.activate_list[0](image)
-        target_feature=self.activate_list[0](target)
+        image_feature=self.activate_list[1](image)
+        target_feature=self.activate_list[1](target)
 
         return tf.reduce_mean(tf.abs(image_feature-target_feature))
 
@@ -119,7 +119,7 @@ class StyleContainer(PixelContainer):
         content_loss=self.content_loss(gen_output, target)
 
         #总损失
-        loss= style_loss+0.8*content_loss
+        loss= 10*style_loss+content_loss
 
         #损失集合
         loss_set={
