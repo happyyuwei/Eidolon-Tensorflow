@@ -168,7 +168,7 @@ class Container:
         for epoch in range(self.log_tool.current_epoch, self.config_loader.epoch+1):
             print("------------------------------------------------------------------\n")
             #reocrd current time
-            print("start epoch {} at time: {}\n".format(
+            print("start epoch {} at time: {}".format(
                 epoch, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
             # initial time
             start = time.time()
@@ -248,7 +248,7 @@ def main(config_loader):
         print("Use device: {} ....".format(config_loader.training_device))
 
         #若允许只是用一块GPU内存
-        if config_loader.training_device.endswidth("-only"):
+        if config_loader.training_device.endswith("-only"):
             # parse device id
             device_id=config_loader.training_device.split("-")[0].split(":")[1]
             # 把其他显卡设成不可见
