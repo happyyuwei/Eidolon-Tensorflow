@@ -3,6 +3,7 @@ from eidolon.config import ArgsParser
 from eidolon import train_tool
 
 import tensorflow as tf
+import numpy as np
 
 def gram(mat):
         """
@@ -11,9 +12,11 @@ def gram(mat):
         mat_shape=tf.shape(mat)
         # 将特征图拉长
         mat=tf.reshape(mat,[mat_shape[0], mat_shape[1]*mat_shape[2], mat_shape[3]])
+        N=tf.cast(mat_shape[1]*mat_shape[2]*mat_shape[3], dtype=tf.float32)
+
 
         #只转置单个特征维度
-        return tf.matmul(mat,tf.transpose(mat, perm=[0,2,1]))
+        return tf.matmul(mat,tf.transpose(mat, perm=[0,2,1]))/N
 
 
 class StyleContainer(PixelContainer):
@@ -86,7 +89,7 @@ class StyleContainer(PixelContainer):
             #提取特征
             image_style=self.activate_list[i](image)
             #计算风格损失
-            loss=loss+tf.reduce_mean(tf.square(gram(image_style)-self.style_feature_list[i]))
+            loss=loss+tf.reduce_mean(tf.abs(gram(image_style)-self.style_feature_list[i]))
         
         return loss
 
@@ -95,10 +98,10 @@ class StyleContainer(PixelContainer):
         """
         内容损失,只计算第7层（下标6）的特征,存在列表第二个位置
         """
-        image_feature=self.activate_list[2](image)
-        target_feature=self.activate_list[2](target)
+        image_feature=self.activate_list[0](image)
+        target_feature=self.activate_list[0](target)
 
-        return tf.reduce_mean(tf.square(image_feature-target_feature))
+        return tf.reduce_mean(tf.abs(image_feature-target_feature))
 
 
     def compute_loss(self, input_image, target):
@@ -110,6 +113,7 @@ class StyleContainer(PixelContainer):
 
         #计算风格损失
         style_loss=self.style_loss(gen_output)
+
 
         #计算内容损失
         content_loss=self.content_loss(gen_output, target)
@@ -123,6 +127,7 @@ class StyleContainer(PixelContainer):
             "style_loss":style_loss,
             "content_loss":content_loss
         }
+        print(loss_set)
 
         return {
             "loss_set":loss_set
