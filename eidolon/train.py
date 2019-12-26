@@ -249,6 +249,7 @@ def main(config_loader):
 
         #若允许只是用一块GPU内存
         if config_loader.training_device.endswith("-only"):
+            print("This program will only use device GPU:{}....".format(device_id))
             # parse device id
             device_id=config_loader.training_device.split("-")[0].split(":")[1]
             # 把其他显卡设成不可见
@@ -257,6 +258,7 @@ def main(config_loader):
             #启动生命周期
             container.lifecycle()
         else:
+            print("This program will only use all the GPU Menmory....")
             # 默认占用所有GPU内存
             with tf.device(config_loader.training_device):
                 container.lifecycle()
