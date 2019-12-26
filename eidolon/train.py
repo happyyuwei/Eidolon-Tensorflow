@@ -249,9 +249,9 @@ def main(config_loader):
 
         #若允许只是用一块GPU内存
         if config_loader.training_device.endswith("-only"):
-            print("This program will only use device GPU:{}....".format(device_id))
             # parse device id
             device_id=config_loader.training_device.split("-")[0].split(":")[1]
+            print("This program will only use the memory of device GPU:{}....".format(device_id))
             # 把其他显卡设成不可见
             os.environ["CUDA_VISIBLE_DEVICES"]=device_id
 
