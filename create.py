@@ -77,8 +77,10 @@ def create_paint_loss_bootstrap():
 
     with open(file_name, "w") as f:
         f.writelines(["python ../../paint_loss.py"])
-    #自动提权
-    os.chmod("paint_loss.sh",stat.S_IRWXU)
+    
+    if system != "Windows":
+        #自动提权
+        os.chmod("paint_loss.sh",stat.S_IRWXU)
 
 
 def create_app(app_name, running_script, conf):

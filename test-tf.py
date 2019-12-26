@@ -33,15 +33,22 @@ import tensorflow as tf
 # plt.imshow(o[0,:,:,61:64])
 # plt.show()
 
-from eidolon import train_tool
+from eidolon.style_container import gram
 
-s=plt.imread("C:\\Users\\happy\\Downloads\\1.jpg")
-s=s/255
-h,w,c=np.shape(s)
-x=np.zeros([1,h,w,c])
-x[0]=s
-# plt.imshow(s)
-# plt.show()
-# print(x)
-# s=s*2-1
-train_tool.save_image(x,"1.png")
+
+a=np.zeros([1,2,2,2])
+
+b=np.zeros([2,2,2])
+
+b1=np.array([[1,2],[3,4]])
+b2=np.array([[5,6],[7,8]])
+
+b[:,:,0]=b1
+b[:,:,1]=b2
+
+a[0]=b
+
+a=tf.convert_to_tensor(a)
+g=gram(a)
+
+print(g[0])

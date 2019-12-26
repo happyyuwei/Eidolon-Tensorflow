@@ -4,6 +4,17 @@ from eidolon import train_tool
 
 import tensorflow as tf
 
+def gram(mat):
+        """
+        格拉姆矩阵，输入矩阵是【batch, h,w, channel】
+        """
+        mat_shape=tf.shape(mat)
+        # 将特征图拉长
+        mat=tf.reshape(mat,[mat_shape[0], mat_shape[1]*mat_shape[2], mat_shape[3]])
+
+        #只转置单个特征维度
+        return tf.matmul(mat,tf.transpose(mat, perm=[0,2,1]))
+
 
 class StyleContainer(PixelContainer):
     """
@@ -30,11 +41,13 @@ class StyleContainer(PixelContainer):
         # 加载风格图像
         self.style_image = train_tool.read_image(
             style_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
-
+        print("load style image {}....".format(style_path))
+        
         # 加载vgg16网络，若网络不存在，会直接经行下载
         # 该网络使用image-net训练，不加载全连接层
         vgg_16 = tf.keras.applications.vgg16.VGG16(
             weights='imagenet', include_top=False)
+        print("load VGG 16....")
 
         # 激活层id
         activate_id = [3, 6, 10, 14, 18]
@@ -48,21 +61,20 @@ class StyleContainer(PixelContainer):
             model.trainable=False
             
             self.activate_list.append(model)
+        
+        print("VGG16 activation layers done....")
 
         #由于风格图像给定，每一层特征就给定，可以提前计算
         #直接计算gram举证
         self.style_feature_list=[]
         for activate in self.activate_list:
-            self.style_feature_list.append(self.gram(activate(self.style_image)))
+            self.style_feature_list.append(gram(activate(self.style_image)))
+        print("Gram feature done....")
 
         # 执行父类方法
         super(StyleContainer, self).on_prepare()
 
-    def gram(self, mat):
-        """
-        格拉姆举证
-        """
-        return tf.matmul(mat,tf.transpose(mat))
+    
 
     def style_loss(self, image):
         """
@@ -74,7 +86,7 @@ class StyleContainer(PixelContainer):
             #提取特征
             image_style=self.activate_list[i](image)
             #计算风格损失
-            loss=loss+tf.reduce_mean(tf.square(self.gram(image_style)-self.style_feature_list[i]))
+            loss=loss+tf.reduce_mean(tf.square(gram(image_style)-self.style_feature_list[i]))
         
         return loss
 
@@ -112,4 +124,6 @@ class StyleContainer(PixelContainer):
             "content_loss":content_loss
         }
 
-        return loss_set
+        return {
+            "loss_set":loss_set
+        }
