@@ -88,7 +88,7 @@ default_config = {
         },
         "training_device": {
             "value": "default",
-            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：/CPU:0，/GPU:0。若使用默认设备，输入default"
+            "desc": "训练使用设备，若需要指定设备，请完整指定设备编号，如：CPU:0，GPU:0。若使用默认设备，输入default"
         },
         "remove_history_checkpoints": {
             "value": True,

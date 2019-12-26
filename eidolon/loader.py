@@ -143,8 +143,17 @@ class ImageLoader:
             sys.exit()
 
         # get dataset file list
-        dataset = tf.data.Dataset.list_files(
-            os.path.join(self.data_dir, "*.{}".format(config_loader.image_type)))
+        """
+        @2019.12.26 
+        数据集加载无法放在GPU上，否则会报错：RuntimeError: Can't copy Tensor with type string to device /job:localhost/replica:0/task:0/device:GPU:3
+        目前尚未解决该问题。
+        因此指定该操作在CPU上执行
+        @author yuwei
+        """
+        with tf.device("CPU:0"):
+            dataset = tf.data.Dataset.list_files(
+                os.path.join(self.data_dir, "*.{}".format(config_loader.image_type)))
+
         # recalculate buffer size
         # if buffer_size<=0， adapted the buffer size
         # then buffer size is the dataset buffer size
