@@ -33,22 +33,9 @@ import tensorflow as tf
 # plt.imshow(o[0,:,:,61:64])
 # plt.show()
 
-from eidolon.style_container import gram
+from test import hello
 
+def x():
+    hello()
 
-a=np.zeros([1,2,2,2])
-
-b=np.zeros([2,2,2])
-
-b1=np.array([[1,2],[3,4]])
-b2=np.array([[5,6],[7,8]])
-
-b[:,:,0]=b1
-b[:,:,1]=b2
-
-a[0]=b
-
-a=tf.convert_to_tensor(a)
-g=gram(a)
-
-print(g[0])
+x()

@@ -209,9 +209,10 @@ class LogTool:
         # 目前默认将tensorboard日志记录在日志目录的tensorboard文件夹中
         self.tensorboard_enable=tensorboard_enable
         print("Tensorboard enable: {}".format(tensorboard_enable))
-        if tensorboard_enable == True:
-            self.tensorboard = tf.summary.create_file_writer(
-                os.path.join(self.log_dir, "tensorboard"))
+        #  当第一次调用保存tensorboard的时候才创建tensorboard writer
+        #避免在创建运行环境（如调用GPU）前调用tensorflow的任何内容
+        # 记录tensorboard是否加载
+        self.tensorboard_init_state=False
 
     def save_image_list_tensorboard(self, image_list, title_list):
         """
@@ -233,6 +234,12 @@ class LogTool:
         使用tensorboard保存损失函数，调用tf.summary.scalar()
         可以使用tensorboard在网页端查看变化曲线
         """
+        if self.tensorboard_init_state==False:
+            #创建tensorboard记录实例
+            self.tensorboard = tf.summary.create_file_writer(
+                os.path.join(self.log_dir, "tensorboard"))
+            self.tensorboard_init_state=True
+
         # 测试支持tensorboard
         with self.tensorboard.as_default():
             for key in loss_set:

@@ -247,7 +247,8 @@ def main(config_loader):
         # 在指定设备中运行
         print("Use device: {} ....".format(config_loader.training_device))
 
-        #若允许只是用一块GPU内存
+        #若允许只是用一块GPU内存, 
+        #Todo 问题尚未解决，一直都会使用所有内存
         if config_loader.training_device.endswith("-only"):
             # parse device id
             device_id=config_loader.training_device.split("-")[0].split(":")[1]
@@ -258,7 +259,7 @@ def main(config_loader):
             #启动生命周期
             container.lifecycle()
         else:
-            print("This program will only use all the GPU Menmory....")
+            print("This program will use all the GPU Menmory....")
             # 默认占用所有GPU内存
             with tf.device(config_loader.training_device):
                 container.lifecycle()
