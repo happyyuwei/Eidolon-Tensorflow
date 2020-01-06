@@ -32,10 +32,25 @@ import tensorflow as tf
 # o=m1(img)
 # plt.imshow(o[0,:,:,61:64])
 # plt.show()
+# model=tf.keras.models.load_model("../face.h5")
 
-from test import hello
+# a=plt.imread("../1.jpg")
+# a=tf.image.resize(a, [256,256])
 
-def x():
-    hello()
+# a=a/127.5-1
+# a=tf.reshape(a, [1,256,256,3])
 
-x()
+# b=model(a)
+
+# b=b[0]*0.5+0.5
+
+# plt.imshow(b)
+# plt.show()
+
+
+from CriminalArt.load_celebA import load_labels
+
+print(load_labels("./data/celebA/list_attr_celeba.txt")["000001.jpg"])
+
+
+

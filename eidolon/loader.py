@@ -131,7 +131,7 @@ class ImageLoader:
         self.data_dir = data_dir
         self.is_training = is_training
 
-    def load(self, config_loader):
+    def load(self, config_loader, load_function=None):
         """
         載入
         :param config_loader:
@@ -149,10 +149,11 @@ class ImageLoader:
         目前尚未解决该问题。
         因此指定该操作在CPU上执行
         @author yuwei
-        """
+        # """
         with tf.device("CPU:0"):
             dataset = tf.data.Dataset.list_files(
                 os.path.join(self.data_dir, "*.{}".format(config_loader.image_type)))
+
 
         # recalculate buffer size
         # if buffer_size<=0， adapted the buffer size
@@ -169,10 +170,14 @@ class ImageLoader:
             dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
 
         # pretreat images
-        dataset = dataset.map(
-            lambda x: load_image(x, config_loader.image_type, config_loader.input_num, self.is_training, config_loader.image_width,
-                                 config_loader.image_height, config_loader.data_flip, config_loader.crop_width,
-                                 config_loader.crop_height))
+        if load_function==None:
+            dataset = dataset.map(
+                lambda x: load_image(x, config_loader.image_type, config_loader.input_num, self.is_training, config_loader.image_width,
+                                    config_loader.image_height, config_loader.data_flip, config_loader.crop_width,
+                                    config_loader.crop_height)
+                                    )
+        else:
+            dataset = dataset.map(lambda x: load_function(x))
 
         # return batch
         return dataset.batch(config_loader.batch_size)
