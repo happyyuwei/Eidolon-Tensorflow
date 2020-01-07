@@ -75,7 +75,7 @@ class CelebAContainer(Container):
         # 测试可视化结果
         for test_input, test_target in self.test_dataset.take(1):
             # 生成测试结果
-            predicted_label = self.model(test_input, training=True)
+            predicted_label = self.model(test_input[0:1])
 
         #生成特征的视觉图像
         predicted_visual_feature=evaluate.create_visual_tensor(predicted_label)

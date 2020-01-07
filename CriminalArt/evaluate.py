@@ -47,7 +47,6 @@ def create_visual(feature, width=1024, height=1024):
                 "_", " "), font=font, fill=font_theme[rand])
             current = current+each_width
 
-    print(num)
     return np.array(img)
 
 def create_visual_tensor(feature, width=1024, height=1024):
