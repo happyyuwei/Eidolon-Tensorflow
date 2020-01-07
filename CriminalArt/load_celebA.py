@@ -15,8 +15,7 @@ def load_labels(path, one_hot=False):
     with open(path, "r") as f:
         lines = f.readlines()
 
-    
-    #該數據第一行和第二行為總行數和列名稱，忽略。
+    # 該數據第一行和第二行為總行數和列名稱，忽略。
 
     lines = lines[2:]
     lines = [each.strip() for each in lines]
@@ -46,18 +45,10 @@ def load_labels(path, one_hot=False):
     return list_map
 
 
-
-# load_labels("C:\\Users\\happy\\Downloads\\list_attr_celeba.txt")
-
-
 def load_dataset(config_loader, is_training):
     """
     目前找不到办法兼容eidolon.load的办法，重写输入数据
     """
-
-    # labels在celebA的根目录下， 名称为list_attr_celeba.txt
-    label_map = load_labels(os.path.join(
-        config_loader.data_dir, "list_attr_celeba.txt"))
 
     # 生成目录
     if is_training == True:
@@ -65,34 +56,79 @@ def load_dataset(config_loader, is_training):
     else:
         path = os.path.join(config_loader.data_dir, "test")
 
-    # 图片列表
-    image_list = os.listdir(path)
+    # 生成目录
+    image_list=os.listdir(path)
+    image_path_list=[]
+    label_path_list=[]
 
-    image_num = len(image_list)
+    for each in image_list:
+        if each.endswith(".jpg"):
+            image_path_list.append(os.path.join(path, each))
+            label_path_list.append(os.path.join(path, each.split(".")[0]+".txt"))
+    
+    #创建tf.dataset数据集
+    dataset=tf.data.Dataset.from_tensor_slices((image_path_list, label_path_list))
 
-    # 图片结果集
-    images = np.zeros([image_num, config_loader.image_height, config_loader.image_width, 3])
-    #标签结果集, 每个标签40维
-    labels = np.zeros([image_num, 40])
+    def map_function(image_file, label_file):
+        # 读取图片
+        image = tf.io.read_file(image_file)
+        image = tf.image.decode_jpeg(image)
 
-    # 加载图片
-    for i in range(image_num):
-
-         # 存储
-        images[i] = plt.imread(os.path.join(path, image_list[i]))[:, :, 0:3]
-        # 查询标签
-        labels[i] = label_map[image_list[i]]
-
-
-     # 转换格式
-    images = tf.cast(images, tf.float32)
-    # 转成【-1,1】
-    images = (images / 127.5) - 1
-
-    #將標籤轉換成float32
-    labels=tf.cast(labels, tf.float32)
+        #解析图片
+        # 转换格式
+        image = tf.cast(image, tf.float32)
+        # 转成【-1,1】
+        image = (image / 127.5) - 1
 
 
-        # 封装成tensorflow.dataset
-    return tf.data.Dataset.from_tensor_slices(
-        (images, labels)).shuffle(image_num).batch(config_loader.batch_size)
+        #读取标签
+        label=tf.io.read_file(label_file)
+        #分割
+        label=tf.strings.split(label, sep=" ")
+        #解析
+        record_defaults = list([0.0] for i in range(1)) 
+        label=tf.io.decode_csv(label, record_defaults=record_defaults)
+        #从【1,40】变成【40】
+        label=tf.reshape(label, [40])
+
+        return image, label
+
+    if config_loader.buffer_size <= 0:
+            config_loader.buffer_size = len(image_path_list)
+    
+    dataset=dataset.map(lambda image_file, label_file: map_function(image_file, label_file))
+    if is_training == True:
+            dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
+    
+    # return batch
+    return dataset.batch(config_loader.batch_size)
+
+
+
+
+
+
+
+def create_labels(img_path, label_path):
+    """
+    创建标签，每张图创建一个txt文件, 文件格式使用空格分开,存在为1,不存在为0.
+    """
+
+    label_map = load_labels(label_path)
+
+    img_list = os.listdir(img_path)
+
+    for each in img_list:
+
+        if each.endswith(".jpg"):
+            label_file = each.split(".")[0]+".txt"
+
+            with open(os.path.join(img_path, label_file), "w") as f:
+                feature = label_map[each]
+
+                line = str(feature[0])
+
+                for i in range(1, len(feature)):
+                    line = line+" "+str(feature[i])
+
+                f.writelines(line)

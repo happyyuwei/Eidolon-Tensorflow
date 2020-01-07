@@ -48,9 +48,28 @@ import tensorflow as tf
 # plt.show()
 
 
-from CriminalArt.load_celebA import load_labels
+from CriminalArt.load_celebA import create_labels
 
-print(load_labels("./data/celebA/list_attr_celeba.txt")["000001.jpg"])
+# # print(load_labels("./data/celebA/list_attr_celeba.txt")["000001.jpg"])
+create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
+# a=tf.io.read_file("./data/celebA/train/000001.txt")
+# # print(a)
+# a=tf.strings.split(a, sep=" ")
+# # print(a)
+# record_defaults = list([0.0] for i in range(1)) 
+# print(record_defaults)
+# a=tf.io.decode_csv(a, record_defaults=record_defaults)
+# print(a)
+
+# from CriminalArt.load_celebA import load_dataset
+# from eidolon import config
+# c=config.ConfigLoader()
+# c.data_dir="./data/celebA"
+# c.batch_size=2
+# d=load_dataset(c, is_training=True)
+# for a, b in d:
+#     print(a)
+#     print(b)
 
 
 
