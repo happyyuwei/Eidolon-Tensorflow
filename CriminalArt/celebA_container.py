@@ -1,6 +1,7 @@
 from eidolon.train import Container
 from CriminalArt import load_celebA
 from CriminalArt import model
+from CriminalArt import evaluate
 
 import os
 
@@ -70,3 +71,17 @@ class CelebAContainer(Container):
     def on_test_epoch(self, current_epoch, loss_set):
          # 保存损失与定量测试结果
         self.log_tool.save_loss(loss_set)
+
+        # 测试可视化结果
+        for test_input, test_target in self.test_dataset.take(1):
+            # 生成测试结果
+            predicted_label = self.model(test_input, training=True)
+
+        #生成特征的视觉图像
+        predicted_visual_feature=evaluate.create_visual_tensor(predicted_label)
+        target_visual_feature=evaluate.create_visual_tensor(test_target)
+
+        image_list=[test_input,target_visual_feature, predicted_visual_feature]
+        title_list=["IN","GT","PR"]
+        self.log_tool.save_image_list(image_list, title_list)
+        

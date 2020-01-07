@@ -105,11 +105,6 @@ def load_dataset(config_loader, is_training):
     return dataset.batch(config_loader.batch_size)
 
 
-
-
-
-
-
 def create_labels(img_path, label_path):
     """
     创建标签，每张图创建一个txt文件, 文件格式使用空格分开,存在为1,不存在为0.

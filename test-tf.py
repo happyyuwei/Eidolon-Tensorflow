@@ -61,15 +61,27 @@ create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
 # a=tf.io.decode_csv(a, record_defaults=record_defaults)
 # print(a)
 
-# from CriminalArt.load_celebA import load_dataset
-# from eidolon import config
-# c=config.ConfigLoader()
-# c.data_dir="./data/celebA"
-# c.batch_size=2
-# d=load_dataset(c, is_training=True)
-# for a, b in d:
-#     print(a)
-#     print(b)
+from CriminalArt.load_celebA import load_dataset
+from eidolon import config
+c=config.ConfigLoader()
+c.data_dir="./data/celebA"
+c.batch_size=2
+d=load_dataset(c, is_training=True)
+for a, b in d:
+    # print(a)
+    print(np.array(b).shape)
 
 
 
+# from CriminalArt import evaluate
+
+# f=[float(each) for each in "0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0".split(" ")]
+# f=np.array(f)
+
+# # image=plt.imread("./data/celebA/train/000001.jpg")
+
+# img=evaluate.create_visual(f)
+# # print(img)
+
+# plt.imshow(img)
+# plt.show()
