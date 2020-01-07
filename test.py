@@ -6,8 +6,11 @@ import sys
 # def hello():
 #     logging.info("hello")
 #     logging.error("error")
+from wordcloud import WordCloud
 
-def hello():
-    print(sys._getframe().f_code.co_name)
-    print(sys._getframe().f_code.co_filename)
+text="hello how are you"
+WordCloud = WordCloud().generate(text)
+image_produce = WordCloud.to_image()
+image_produce.show()
+
 

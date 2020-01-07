@@ -68,6 +68,11 @@ def load_dataset(config_loader, is_training):
     
     #创建tf.dataset数据集
     dataset=tf.data.Dataset.from_tensor_slices((image_path_list, label_path_list))
+    
+    if config_loader.buffer_size <= 0:
+            config_loader.buffer_size = len(image_path_list)
+    if is_training == True:
+        dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
 
     def map_function(image_file, label_file):
         # 读取图片
@@ -93,12 +98,8 @@ def load_dataset(config_loader, is_training):
 
         return image, label
 
-    if config_loader.buffer_size <= 0:
-            config_loader.buffer_size = len(image_path_list)
     
     dataset=dataset.map(lambda image_file, label_file: map_function(image_file, label_file))
-    if is_training == True:
-            dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
     
     # return batch
     return dataset.batch(config_loader.batch_size)
