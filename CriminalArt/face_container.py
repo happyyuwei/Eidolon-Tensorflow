@@ -1,5 +1,6 @@
 from eidolon.pixel_container import PixelContainer
 from CriminalArt import load_celebA
+from CriminalArt import evaluate
 
 import numpy as np
 import tensorflow as tf
@@ -53,7 +54,8 @@ class FaceContainer(PixelContainer):
             # 生成测试结果
             predicted_image = self.generator(mask, training=True)
 
+        visual_mask=evaluate.create_visual_tensor(mask)
         # 排成列表
-        image_list = [mask, test_input, predicted_image]
-        title_list = ["IN", "GT", "PR"]
+        image_list = [mask,visual_mask , test_input, predicted_image]
+        title_list = ["IN","IM", "GT", "PR"]
         return image_list, title_list
