@@ -22,15 +22,7 @@ class PixelContainer(train.Container):
         super(PixelContainer, self).__init__(config_loader)
         # print("tensorflow version: {}".format(tf.__version__))
 
-    def on_prepare(self):
-        """
-        准备阶段，完成以下事宜：
-        1. 加载数据集
-        2. 创建网络与优化器
-        3. 将网络与优化器注册到父类中，以便自动保存
-        4. 调用父类on_prepare
-        """
-
+    def on_prepare_dataset(self):
         # 载入数据
         # 训练数据
         train_loader = loader.ImageLoader(os.path.join(
@@ -44,6 +36,18 @@ class PixelContainer(train.Container):
 
         # 注册数据集
         self.register_dataset(train_dataset, test_dataset)
+
+
+    def on_prepare(self):
+        """
+        准备阶段，完成以下事宜：
+        1. 加载数据集
+        2. 创建网络与优化器
+        3. 将网络与优化器注册到父类中，以便自动保存
+        4. 调用父类on_prepare
+        """
+        #加载数据集
+        self.on_prepare_dataset()
 
         # 创建生成网络
         self.generator = UNet(input_shape=self.config_loader.config["dataset"]["image_size"]["value"],
@@ -198,6 +202,7 @@ class PixelContainer(train.Container):
 
         loss_set["test_psnr"]=psnr
         loss_set["test_ssim"]=ssim
+
         return loss_set
 
     def test_visual(self):

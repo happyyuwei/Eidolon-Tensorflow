@@ -1,6 +1,7 @@
 import logging
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 
 # logging.basicConfig(level=logging.INFO,format="%(asctime)s - %(funcName)s - %(module)s - %(message)s")
 
@@ -8,4 +9,11 @@ import numpy as np
 #     logging.info("hello")
 #     logging.error("error")
 
-print(512.0//3.0)
+# from CriminalArt.load_celebA import create_label_images
+
+# create_label_images("./data/celebA/train")
+
+# x=plt.imread("./data/celebA/train/000001.png")
+# print(x)
+
+print(np.random.randn(3,3))

@@ -65,11 +65,11 @@ from CriminalArt.load_celebA import load_dataset
 from eidolon import config
 c=config.ConfigLoader()
 c.data_dir="./data/celebA"
-c.batch_size=2
+c.batch_size=1
 d=load_dataset(c, is_training=True)
 for a, b in d:
     # print(a)
-    print(np.array(b).shape)
+    print(b)
 
 
 

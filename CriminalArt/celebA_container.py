@@ -47,6 +47,8 @@ class CelebAContainer(Container):
 
     @tf.function
     def on_train_batch(self, input_image, label):
+        # 传入的label包含label和mask
+        label, _ = label
         with tf.GradientTape() as tape:
             # 输出
             logit = self.model(input_image)
@@ -74,14 +76,18 @@ class CelebAContainer(Container):
 
         # 测试可视化结果
         for test_input, test_target in self.test_dataset.take(1):
+
+            test_target, _ = test_target
             # 生成测试结果
             predicted_label = self.model(test_input[0:1])
 
-        #生成特征的视觉图像
-        predicted_visual_feature=evaluate.create_visual_tensor(predicted_label)
-        target_visual_feature=evaluate.create_visual_tensor(test_target)
+        # 生成特征的视觉图像
+        predicted_visual_feature = evaluate.create_visual_tensor(
+            predicted_label)
+        target_visual_feature = evaluate.create_visual_tensor(test_target)
 
-        image_list=[test_input,target_visual_feature, predicted_visual_feature]
-        title_list=["IN","GT","PR"]
+        image_list = [test_input, target_visual_feature,
+                      predicted_visual_feature]
+                      
+        title_list = ["IN", "GT", "PR"]
         self.log_tool.save_image_list(image_list, title_list)
-        

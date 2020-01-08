@@ -51,6 +51,11 @@ class Container:
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
 
+    def on_prepare_dataset(self):
+        """
+        准备数据集，默认不提供方法
+        """
+
     def on_prepare(self):
         """
         准备阶段调用，允许重写。

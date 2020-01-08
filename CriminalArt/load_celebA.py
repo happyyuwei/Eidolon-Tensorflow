@@ -57,51 +57,74 @@ def load_dataset(config_loader, is_training):
         path = os.path.join(config_loader.data_dir, "test")
 
     # 生成目录
-    image_list=os.listdir(path)
-    image_path_list=[]
-    label_path_list=[]
+    image_list = os.listdir(path)
+    image_path_list = []
+    label_path_list = []
+    mask_path_list = []
 
     for each in image_list:
         if each.endswith(".jpg"):
             image_path_list.append(os.path.join(path, each))
-            label_path_list.append(os.path.join(path, each.split(".")[0]+".txt"))
-    
-    #创建tf.dataset数据集
-    dataset=tf.data.Dataset.from_tensor_slices((image_path_list, label_path_list))
-    
-    if config_loader.buffer_size <= 0:
-            config_loader.buffer_size = len(image_path_list)
+            label_path_list.append(os.path.join(
+                path, each.split(".")[0]+".txt"))
+            mask_path_list.append(os.path.join(
+                path, each.split(".")[0]+".png"))
 
-    #置乱数据集，目前无论是训练集还是测试集都会置乱
+    # 创建tf.dataset数据集
+    dataset = tf.data.Dataset.from_tensor_slices(
+        (image_path_list, label_path_list, mask_path_list))
+
+    if config_loader.buffer_size <= 0:
+        config_loader.buffer_size = len(image_path_list)
+
+    # 置乱数据集，目前无论是训练集还是测试集都会置乱
     dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
 
-    def map_function(image_file, label_file):
+    def map_function(image_file, label_file, mask_file):
         # 读取图片
         image = tf.io.read_file(image_file)
         image = tf.image.decode_jpeg(image)
 
-        #解析图片
+        image = image[:, :, 0:3]
+
+        # 解析图片
         # 转换格式
         image = tf.cast(image, tf.float32)
+        # 转换大小
+        image = tf.image.resize(
+            image, size=[config_loader.image_height, config_loader.image_width])
         # 转成【-1,1】
         image = (image / 127.5) - 1
 
+        # 读取标签
+        label = tf.io.read_file(label_file)
+        # 分割
+        label = tf.strings.split(label, sep=" ")
+        # 解析
+        record_defaults = list([0.0] for i in range(1))
+        label = tf.io.decode_csv(label, record_defaults=record_defaults)
+        # 从【1,40】变成【40】
+        label = tf.reshape(label, [40])
 
-        #读取标签
-        label=tf.io.read_file(label_file)
-        #分割
-        label=tf.strings.split(label, sep=" ")
-        #解析
-        record_defaults = list([0.0] for i in range(1)) 
-        label=tf.io.decode_csv(label, record_defaults=record_defaults)
-        #从【1,40】变成【40】
-        label=tf.reshape(label, [40])
+        # 读取mask
+        mask = tf.io.read_file(mask_file)
+        mask = tf.image.decode_png(mask)
 
-        return image, label
+        mask = mask[:, :, 0:3]
 
-    
-    dataset=dataset.map(lambda image_file, label_file: map_function(image_file, label_file))
-    
+        # 解析图片
+        # 转换格式
+
+        mask = tf.cast(mask, tf.float32)
+        # 转成【-1,1】, mask为-1,1
+        mask = mask*2 - 1
+
+        return image, (label, mask)
+
+    # 解析
+    dataset = dataset.map(lambda image_file, label_file, mask_file: map_function(
+        image_file, label_file, mask_file))
+
     # return batch
     return dataset.batch(config_loader.batch_size)
 
@@ -129,3 +152,42 @@ def create_labels(img_path, label_path):
                     line = line+" "+str(feature[i])
 
                 f.writelines(line)
+
+
+def create_label_image(label_path, width=128, height=128):
+    """
+    输入为标签路径，一共128个像素，左边4个0，右边4个0。中间120个像素，每四3个为一个。
+    """
+    with open(label_path, "r") as f:
+        line = f.readlines()[0]
+
+    # 解析特征
+    feature = [float(each) for each in line.split(" ")]
+
+    # 创建图片
+    mask = np.zeros([height, width, 3])
+
+    for i in range(len(feature)):
+        mask[:, 4+3*i:4+3*(i+1), :] = feature[i]
+
+    return mask
+
+
+# def create_label_images(label_path):
+
+    label_list = os.listdir(label_path)
+
+    count = 0
+
+    list_len = len(label_list)/2
+
+    for each in label_list:
+        if each.endswith(".txt"):
+            # 生成标签图像
+            mask = create_label_image(os.path.join(label_path, each))
+            # 保存
+            out_path = os.path.join(label_path, each.split(".")[0]+".png")
+            #
+            plt.imsave(out_path, mask)
+            count = count+1
+            print("{}...{}%".format(each, count/list_len))
