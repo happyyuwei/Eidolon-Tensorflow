@@ -71,8 +71,9 @@ def load_dataset(config_loader, is_training):
     
     if config_loader.buffer_size <= 0:
             config_loader.buffer_size = len(image_path_list)
-    if is_training == True:
-        dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
+
+    #置乱数据集，目前无论是训练集还是测试集都会置乱
+    dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
 
     def map_function(image_file, label_file):
         # 读取图片

@@ -177,7 +177,7 @@ class Container:
             # train epoch
             loss_set = self.on_train_epoch(epoch)
 
-            # 没过一个保存阶段就会调用一次该函数
+            # 每过一个保存阶段就会调用一次该函数
             if epoch % self.config_loader.save_period == 0:
                 # test epoch
                 self.on_test_epoch(epoch, loss_set)
