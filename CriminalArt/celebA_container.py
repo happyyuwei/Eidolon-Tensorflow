@@ -35,7 +35,7 @@ class CelebAContainer(Container):
         self.log_tool.plot_model(self.model, "resnet50")
 
         # 创建优化器
-        self.optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+        self.optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.9)
         print("Initial generator optimizer....")
 
         # 将模型保存到存储列表，以便框架自动保存
