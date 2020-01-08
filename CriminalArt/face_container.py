@@ -49,12 +49,12 @@ class FaceContainer(PixelContainer):
         # 测试可视化结果
         for test_input, test_target in self.test_dataset.take(1):
 
-            _, mask = test_target
+            label, mask = test_target
 
             # 生成测试结果
             predicted_image = self.generator(mask, training=True)
 
-        visual_mask=evaluate.create_visual_tensor(mask)
+        visual_mask=evaluate.create_visual_tensor(label)
         # 排成列表
         image_list = [mask,visual_mask , test_input, predicted_image]
         title_list = ["IN","IM", "GT", "PR"]
