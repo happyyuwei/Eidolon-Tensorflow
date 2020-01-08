@@ -2,6 +2,7 @@ from eidolon.pixel_container import PixelContainer
 from CriminalArt import load_celebA
 
 import numpy as np
+import tensorflow as tf
 
 
 class FaceContainer(PixelContainer):
@@ -25,9 +26,10 @@ class FaceContainer(PixelContainer):
         # 传入的label包括label图像和向量
         _, mask = label
 
+        shape = tf.shape(mask)
+
         # 加入噪声
-        mask = mask+np.random.randn(self.config_loader.batch_size,
-                                      self.config_loader.image_height, self.config_loader.image_width, 3)
+        mask = mask + tf.random.normal(shape)
 
         result_set = super(FaceContainer, self).compute_loss(mask, image)
 

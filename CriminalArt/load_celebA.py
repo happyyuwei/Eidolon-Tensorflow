@@ -173,7 +173,7 @@ def create_label_image(label_path, width=128, height=128):
     return mask
 
 
-# def create_label_images(label_path):
+def create_label_images(label_path):
 
     label_list = os.listdir(label_path)
 
@@ -190,4 +190,4 @@ def create_label_image(label_path, width=128, height=128):
             #
             plt.imsave(out_path, mask)
             count = count+1
-            print("{}...{}%".format(each, count/list_len))
+            print("{}...{}%".format(each, count*100/list_len))
