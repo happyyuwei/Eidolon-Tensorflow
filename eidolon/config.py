@@ -114,8 +114,8 @@ default_config = {
             "desc": "如果在低配GPU中(<4G)，可能发生网络结构过于复杂而显存不足的情况。禁用该选项时，会把UNet中的编码器最后一层与解码器第一层去除。"
         },
         "callback_args": {
-            "value": ["--decoder=../../trained_models/models/auto_mnist_x64", "--wm_path=../../WMNetv2/watermark/wm_binary_feature_x64.png"],
-            "desc": "设置回调函数输入参数，用于初始化自定义的回调参数。目前支持--key=value格式。输入内容为数组，每个元素请用逗号隔开。目前有效参数：--decoder, --attack, --wm_path。"
+            "value": ["--decoder=../../trained_models/models/auto_mnist_x64", "--wm_path=../../WMNetv2/watermark/wm_binary_feature_x64.png","--wm_width=64"],
+            "desc": "设置回调函数输入参数，用于初始化自定义的回调参数。目前支持--key=value格式。输入内容为数组，每个元素请用逗号隔开。目前有效参数：--decoder, --attack, --wm_path, --wm_width。注意：新版推荐wm_path选择new"
         },
         "lambda": {
             "value": [1, 1],

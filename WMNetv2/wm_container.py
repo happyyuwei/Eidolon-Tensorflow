@@ -11,7 +11,7 @@ from eidolon import train_tool
 from eidolon import loss_util
 
 from WMNetv2.extractor import Extractor
-from WMNetv2.model_use import EncoderDecoder
+from WMNetv2.model_use import EncoderDecoder, decode_watermark_from_tensor
 
 
 class WMContainer(pixel_container.PixelContainer):
@@ -50,8 +50,10 @@ class WMContainer(pixel_container.PixelContainer):
         self.decoder_path = args_parser.get("decoder")
 
         # 水印
-        self.wm_path=args_parser.get("wm_path")
-        
+        self.wm_path = args_parser.get("wm_path")
+
+        # 水印大小
+        self.wm_width = args_parser.get("wm_width")
 
         # training noise attack
         self.noise_attack = args_parser.get("noise") in ("True", "true")
@@ -69,7 +71,8 @@ class WMContainer(pixel_container.PixelContainer):
         self.model_map["extractor"] = self.extractor
 
         # load watermark
-        self.watermark_target = train_tool.read_image(self.wm_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
+        self.watermark_target = train_tool.read_image(
+            self.wm_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
         print("load watermark successfully...")
 
         # create negitive. if no watermark, a 1 matrix will be out
@@ -81,8 +84,10 @@ class WMContainer(pixel_container.PixelContainer):
         # @update 2019.11.27
         # @author yuwei
         # 修复相对路径bug,否则无法载入模型
-        self.decoder_model = EncoderDecoder(self.decoder_path)
-        print("load decoder successfully...")
+        # 新版本不需要解码器预训练
+        if self.decoder_path != "new":
+            self.decoder_model = EncoderDecoder(self.decoder_path)
+            print("load decoder successfully...")
 
         # 调用父类
         super(WMContainer, self).on_prepare()
@@ -94,7 +99,7 @@ class WMContainer(pixel_container.PixelContainer):
         # 计算任务损失函数
         result_set = super(WMContainer, self).compute_loss(input_image, target)
 
-        #开始计算水印损失函数
+        # 开始计算水印损失函数
 
         # no attack
         gen_output = result_set["gen_output"]
@@ -143,7 +148,7 @@ class WMContainer(pixel_container.PixelContainer):
 
         return result_set
 
-    #训练直接复用父类代码
+    # 训练直接复用父类代码
     def on_trainable_variables(self):
         return self.generator.trainable_variables + self.extractor.trainable_variables
 
@@ -152,11 +157,11 @@ class WMContainer(pixel_container.PixelContainer):
         视觉测试，在测试集上选择一个结果输出可视图像
         复用部分父类代码，再加上输出水印的可见效果
         """
-        image_list, title_list=super(WMContainer,self).test_visual()
-        
-        gen_output=image_list[2]
-        ground_truth=image_list[1]
-        #输出水印
+        image_list, title_list = super(WMContainer, self).test_visual()
+
+        gen_output = image_list[2]
+        ground_truth = image_list[1]
+        # 输出水印
         # extract positive feature
         extract_watermark_feature = self.extractor(
             gen_output, training=True)
@@ -165,32 +170,40 @@ class WMContainer(pixel_container.PixelContainer):
         extract_negative_feature = self.extractor(
             ground_truth, training=True)
 
-        # extarct watermark
-        extract_watermark = self.decoder_model.decode(
-            extract_watermark_feature)
-        # extract negative
-        extract_negative = self.decoder_model.decode(
-            extract_negative_feature)
-        
-        #添加到输出
+        # 保留老版本的解码方法
+        if self.decoder_path != "new":
+            # extarct watermark
+            extract_watermark = self.decoder_model.decode(
+                extract_watermark_feature)
+            # extract negative
+            extract_negative = self.decoder_model.decode(
+                extract_negative_feature)
+        else:
+            # extarct watermark
+            extract_watermark = decode_watermark_from_tensor(
+                extract_watermark_feature, self.wm_width, self.wm_width)
+            # extract negative
+            extract_negative = decode_watermark_from_tensor(
+                extract_negative_feature, self.wm_width, self.wm_width)
+
+        # 添加到输出
         image_list.append(extract_watermark_feature)
         image_list.append(extract_negative_feature)
         image_list.append(extract_watermark)
         image_list.append(extract_negative)
 
-        #添加标题
+        # 添加标题
         title_list.append("WF+")
         title_list.append("WF-")
         title_list.append("E+")
         title_list.append("E-")
-    
-        return image_list, title_list
 
+        return image_list, title_list
 
     def test_metrics(self, loss_set):
         wm_mean_error = 0
         count = 0
-        for _,(test_input_image, _) in self.test_dataset.enumerate():
+        for _, (test_input_image, _) in self.test_dataset.enumerate():
             # 输入
             test_output_image = self.generator(test_input_image, training=True)
             # calcluate watermark feature me in the test data
@@ -203,8 +216,6 @@ class WMContainer(pixel_container.PixelContainer):
 
         # mean
         wm_mean_error = wm_mean_error/count
-        loss_set["wm_error"]=wm_mean_error
+        loss_set["wm_error"] = wm_mean_error
 
         return loss_set
-
-

@@ -104,9 +104,10 @@ def save_images(image_list, title_list, image_dir, seq=""):
         save_image(image_list[i], dir, min=-1, max=1)
 
 
-def read_image(path, width, height, change_scale=False, binary=False):
+def read_image(path, width, height, change_scale=False, binary=False, threshold=0.5):
     """
     按指定大小读取图片，注意：如果尺寸和实际尺寸不符合，会进行裁剪或者填充平铺以满足指定尺寸。
+    返回四维tensor
     @update 2019.11.27
     从train_watermark中将该函数移至此处，作为基础设施
 
@@ -121,6 +122,7 @@ def read_image(path, width, height, change_scale=False, binary=False):
     :param height:
     :param_scale: false:不进行任何变化,[0,1]，True:变换到[-1,1]
     :param binary: 将图像变为二值图
+    :param threshold: 二值图像阈值，只有当binary设置成true，该参数才有意义
     :return:
     """
     image = plt.imread(path)
@@ -129,8 +131,8 @@ def read_image(path, width, height, change_scale=False, binary=False):
 
     if binary == True:
         # filter
-        image[image < 0.5] = 0
-        image[image >= 0.5] = 1
+        image[image < threshold] = 0
+        image[image >= threshold] = 1
         # same in each channel
         image[0, :, :, 1] = image[0, :, :, 0]
         image[0, :, :, 2] = image[0, :, :, 0]

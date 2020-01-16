@@ -150,6 +150,48 @@ class EncoderDecoder(Model):
         return np.array(encode_image)
 
 
+
+def encode_watermark_from_image(path, width, height):
+
+    #读取文件
+    img=plt.imread(path)
+    #去除透明通道
+    img=img[:,:,0:3]
+    img_h, img_w, _=img.shape
+
+    wm=np.zeros([height, width, 3])
+
+    row=height//img_h
+    col=width//img_w
+
+
+    for i in range(row):
+        for j in range(col):
+            wm[i*img_h:(i+1)*img_h,j*img_w:(j+1)*img_w,:]=img
+
+    return wm.reshape([1, height, width,3])
+    
+def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
+    wm=wm_tensor
+    num, wm_h, wm_w, _=np.shape(wm)
+
+    row=wm_h//out_height
+    col=wm_w//out_width
+
+    out=np.zeros([num, out_height, out_width, 3])
+
+    for i in range(row):
+        for j in range(col):
+            out=out+wm[:, i*out_height:(i+1)*out_height,j*out_width:(j+1)*out_width,:]
+    
+    out=out/(row*col)
+
+    return out
+
+
+    
+
+
 class GeneratorModel(Model):
     """
     生成模型
