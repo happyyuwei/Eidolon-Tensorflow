@@ -53,7 +53,7 @@ class WMContainer(pixel_container.PixelContainer):
         self.wm_path = args_parser.get("wm_path")
 
         # 水印大小
-        self.wm_width = args_parser.get("wm_width")
+        self.wm_width = int(args_parser.get("wm_width"))
 
         # training noise attack
         self.noise_attack = args_parser.get("noise") in ("True", "true")
