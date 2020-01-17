@@ -11,7 +11,7 @@ from eidolon import train_tool
 from eidolon import loss_util
 
 from WMNetv2.extractor import Extractor
-from WMNetv2.model_use import EncoderDecoder, decode_watermark_from_tensor
+from WMNetv2.model_use import EncoderDecoder, decode_watermark_from_tensor, encode_watermark_from_image
 
 
 class WMContainer(pixel_container.PixelContainer):
@@ -71,8 +71,13 @@ class WMContainer(pixel_container.PixelContainer):
         self.model_map["extractor"] = self.extractor
 
         # load watermark
-        self.watermark_target = train_tool.read_image(
-            self.wm_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
+        # 保留老版本的编码方法
+        if self.decoder_path != "new":
+            self.watermark_target = train_tool.read_image(
+                self.wm_path, self.config_loader.image_width, self.config_loader.image_height, change_scale=True)
+        else:
+            self.watermark_target = encode_watermark_from_image(
+                self.wm_path, self.config_loader.image_width, self.config_loader.image_height)
         print("load watermark successfully...")
 
         # create negitive. if no watermark, a 1 matrix will be out
