@@ -1,3 +1,4 @@
+from WMNetv2 import auto
 import os
 import sys
 import math
@@ -7,8 +8,6 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 sys.path.append("./")
-
-from WMNetv2 import auto
 
 
 class Model:
@@ -28,10 +27,10 @@ class Model:
 
 class EncoderDecoder(Model):
 
-    def __init__(self,  model_path, input_shape=[64,64],key_enable=False):
+    def __init__(self,  model_path, input_shape=[64, 64], key_enable=False):
         super(EncoderDecoder, self).__init__(model_path)
 
-        self.key_enable=key_enable
+        self.key_enable = key_enable
 
         # print("load encoder....")
         # self.encoder = auto.Encoder(input_shape)
@@ -42,8 +41,10 @@ class EncoderDecoder(Model):
             print("load key encoder....")
             self.key_encoder = auto.Encoder(input_shape,)
 
-        self.encoder=tf.keras.models.load_model(os.path.join(model_path,"encoder.h5"))
-        self.decoder=tf.keras.models.load_model(os.path.join(model_path,"decoder.h5"))
+        self.encoder = tf.keras.models.load_model(
+            os.path.join(model_path, "encoder.h5"))
+        self.decoder = tf.keras.models.load_model(
+            os.path.join(model_path, "decoder.h5"))
 
         # checkpoint = tf.train.Checkpoint()
         # model_map={
@@ -52,7 +53,6 @@ class EncoderDecoder(Model):
         #     "decoder":self.decoder
         # }
 
-    
         # load trained model
         if key_enable == True:
             #
@@ -69,15 +69,15 @@ class EncoderDecoder(Model):
         # change scale to [-1,1]
         encode_image = encode_image[:, :, 0:3] * 2 - 1
 
-        h,w,c=np.shape(encode_image)
+        h, w, c = np.shape(encode_image)
 
         # reshape to 4 dim
         encode_image = tf.reshape(encode_image, [1, h, w, 3])
 
-        secret_key=None
-        if self.key_enable==True:
-            #检查是否输入秘钥
-            if secret_key_path==None:
+        secret_key = None
+        if self.key_enable == True:
+            # 检查是否输入秘钥
+            if secret_key_path == None:
                 print("Error: no secret key path found")
                 sys.exit()
             # 载入秘钥
@@ -86,7 +86,7 @@ class EncoderDecoder(Model):
             secret_key = tf.convert_to_tensor(secret_key, dtype=tf.float32)
 
         # out
-        out=self.decode(encode_image, secret_key)
+        out = self.decode(encode_image, secret_key)
 
         # back to[0,1] with size [32,32,3]
         out = out[0] * 0.5 + 0.5
@@ -106,8 +106,8 @@ class EncoderDecoder(Model):
 
         """
         # the encode_image is [1, 128,128,3], reshape to [1, 32,32,48]
-        _,h,w,_=np.shape(encode_image)
-        w=int(math.sqrt(h*w*3/48))
+        _, h, w, _ = np.shape(encode_image)
+        w = int(math.sqrt(h*w*3/48))
         encode_image = tf.reshape(encode_image, [1, w, w, 48])
 
         if self.key_enable == True:
@@ -131,8 +131,8 @@ class EncoderDecoder(Model):
         encode_image = plt.imread(input_path)
         # change scale to [-1,1], only get 3 channels
         encode_image = encode_image[:, :, 0:3] * 2 - 1
-        
-        h, w, _=np.shape(encode_image)
+
+        h, w, _ = np.shape(encode_image)
 
         # the input should be [1,32,32,3]
         # reshape to 4 dim
@@ -140,7 +140,7 @@ class EncoderDecoder(Model):
         # encode, shape [1,32,32,48]
         encode_image = self.encoder(encode_image, training=True)
 
-        w=int(math.sqrt(w*h*48/3))
+        w = int(math.sqrt(w*h*48/3))
 
         # reshape to [1,128,128,3]
         encode_image = tf.reshape(encode_image, [1, w, w, 3])
@@ -150,46 +150,52 @@ class EncoderDecoder(Model):
         return np.array(encode_image)
 
 
+def encode_watermark_from_image(path, width, height, change_scale=True):
+    """
+    :param change_scale: 将输出变为【-1，1】
+    """
 
-def encode_watermark_from_image(path, width, height):
+    # 读取文件
+    img = plt.imread(path)
+    # 去除透明通道
+    img = img[:, :, 0:3]
+    img_h, img_w, _ = img.shape
 
-    #读取文件
-    img=plt.imread(path)
-    #去除透明通道
-    img=img[:,:,0:3]
-    img_h, img_w, _=img.shape
+    wm = np.zeros([height, width, 3])
 
-    wm=np.zeros([height, width, 3])
-
-    row=height//img_h
-    col=width//img_w
-
+    row = height//img_h
+    col = width//img_w
 
     for i in range(row):
         for j in range(col):
-            wm[i*img_h:(i+1)*img_h,j*img_w:(j+1)*img_w,:]=img
+            wm[i*img_h:(i+1)*img_h, j*img_w:(j+1)*img_w, :] = img
 
-    return wm.reshape([1, height, width,3])
-    
+    wm = wm.reshape([1, height, width, 3])
+
+    if change_scale == True:
+        wm = wm*2-1
+
+    return wm
+
+
 def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
-    wm=wm_tensor
-    num, wm_h, wm_w, _=np.shape(wm)
+    wm = wm_tensor
+    num, wm_h, wm_w, _ = np.shape(wm)
 
-    row=wm_h//out_height
-    col=wm_w//out_width
+    row = wm_h//out_height
+    col = wm_w//out_width
 
-    out=np.zeros([num, out_height, out_width, 3])
+    out = np.zeros([num, out_height, out_width, 3])
 
     for i in range(row):
         for j in range(col):
-            out=out+wm[:, i*out_height:(i+1)*out_height,j*out_width:(j+1)*out_width,:]
-    
-    out=out/(row*col)
+            out = out + \
+                wm[:, i*out_height:(i+1)*out_height, j *
+                   out_width:(j+1)*out_width, :]
+
+    out = out/(row*col)
 
     return out
-
-
-    
 
 
 class GeneratorModel(Model):
@@ -316,7 +322,8 @@ if __name__ == "__main__":
 
     # start model
     # model = EncoderDecoder("./trained_models/auto_mnist")
-    model = EncoderDecoder("./trained_models/models/auto_mnist_x64/", key_enable=False)
+    model = EncoderDecoder(
+        "./trained_models/models/auto_mnist_x64/", key_enable=False)
 
     # # get feature
     # wm_feature = model.encode("wm_binary.png")
@@ -325,9 +332,10 @@ if __name__ == "__main__":
     # plt.imsave("wm_binary_feature.png", wm_feature)
 
     # decode feature
-    wm = model.decode_from_image("./WMNetv2/watermark/wm_binary_feature_x64.png")
+    wm = model.decode_from_image(
+        "./WMNetv2/watermark/wm_binary_feature_x64.png")
 
-    # f=model.encode("./WMNetv2/watermark/wm_binary_x64.png")  
+    # f=model.encode("./WMNetv2/watermark/wm_binary_x64.png")
 
     wm[wm < 0.5] = 0
     wm[wm > 0.5] = 1
