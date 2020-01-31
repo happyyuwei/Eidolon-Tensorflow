@@ -31,14 +31,22 @@ def create_train_bootstrap(running_script):
     elif system == "Linux":
         # linux中使用\n换行
         cmd = [run_cmd+"\n"]
+        #使用nohup转移到后台运行脚本
+        backend_cmd=["nohup ./train.sh >nohup.out 2>&1 &"]
+
         with open("train.sh", "w") as f:
             f.writelines(cmd)
+
+        # 创建后台运行脚本
+        with open("train-backend.sh", "w") as f:
+            f.writelines(backend_cmd)
         
         # linux下生成脚本需要提权
         #@update 2019.12.24
         #@author yuwei
         #自动提权
         os.chmod("train.sh",stat.S_IRWXU)
+        os.chmod("train-backend.sh",stat.S_IRWXU)
     else:
         print("Error: System: {} is not supported currently.".format(system))
         sys.exit()
@@ -111,7 +119,9 @@ def create_app(app_name, running_script, conf):
     # create bootstrap train.bat
     create_train_bootstrap(running_script)
     # create config.bat
-    create_config_bootstrap(app_name)
+    # 只有在windows在生成配置界面
+    if platform.system()=="Windows":
+        create_config_bootstrap(app_name)
     # create paint script paint_loss.bat
     create_paint_loss_bootstrap()
 

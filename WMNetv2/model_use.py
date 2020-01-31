@@ -1,4 +1,5 @@
-from WMNetv2 import auto
+
+
 import os
 import sys
 import math
@@ -7,13 +8,18 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-sys.path.append("./")
+# sys.path.append("./")
+
+# from WMNetv2 import auto
 
 
 class Model:
 
     def __init__(self, model_path):
         """
+        @update 2019.1.31
+        tensorflow 2.0版本之后，框架会检查路径是否存在，因此不需要此处手动检查
+
         检查模型是否存在，非常重要！！
         tensorflow的checkpoint不会检查,若路径输入错误不会报错！！！
         大坑啊，只能手动实现。建议所有模型类继承该基类
@@ -23,6 +29,7 @@ class Model:
         if os.path.exists(model_path) == False:
             print("Error: No model is found in {}".format(model_path))
             sys.exit()
+
 
 
 class EncoderDecoder(Model):
@@ -37,9 +44,11 @@ class EncoderDecoder(Model):
         # print("load decoder....")
         # self.decoder = auto.Decoder(input_shape)
 
-        if key_enable == True:
-            print("load key encoder....")
-            self.key_encoder = auto.Encoder(input_shape,)
+        # 密钥控制请查看v1版本
+        # if key_enable == True:
+        #     print("load key encoder....")
+        #     # self.key_encoder = auto.Encoder(input_shape,)
+        #     self.key_encoder = call
 
         self.encoder = tf.keras.models.load_model(
             os.path.join(model_path, "encoder.h5"))
@@ -152,6 +161,9 @@ class EncoderDecoder(Model):
 
 def encode_watermark_from_image(path, width, height, change_scale=True):
     """
+    将一张图片进行编码，目前版本：将该图片反复复制平铺成指定宽度。
+    :param width:输出宽度
+    :param height:输出高度
     :param change_scale: 将输出变为【-1，1】
     """
 
@@ -179,6 +191,11 @@ def encode_watermark_from_image(path, width, height, change_scale=True):
 
 
 def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
+    """
+    将以编码的水印解码成图片
+    :return out 输出解码的水印，为4维tensor
+    """
+
     wm = wm_tensor
     num, wm_h, wm_w, _ = np.shape(wm)
 
@@ -198,43 +215,26 @@ def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
     return out
 
 
-class GeneratorModel(Model):
+class GeneratorModel:
     """
     生成模型
     """
 
-    def __init__(self, model_path, watermark=False, decoder_path=None):
-        # parent init function
-        super(GeneratorModel, self).__init__(model_path)
+    def __init__(self, generator_path, watermark_enable=False, wm_width=64, wm_height=64, extractor_path=None):
+        # # parent init function
+        # super(GeneratorModel, self).__init__(model_path)
 
-        self.watermark = watermark
+        self.watermark_enable = watermark_enable
+
+        self.wm_width = wm_width
+        self.wm_height = wm_height
 
         print("load generator....")
-        self.generator = cgan.Generator()
+        self.generator = tf.keras.models.load_model(generator_path)
 
-        if watermark == True:
+        if watermark_enable == True:
             print("load extractor....")
-            self.extractor = invisible_extract.ExtractInvisible()
-            print("initial auto encoder-decoder....")
-            self.decoder_model = EncoderDecoder(decoder_path)
-
-        # initial optimizer
-        # not used
-        print("initial generator optimizer....")
-        generator_optimizer = tf.train.AdamOptimizer(2e-4, beta1=0.5)
-
-        # load trained model
-        checkpoint = None
-        if watermark == False:
-            checkpoint = tf.train.Checkpoint(
-                generator_optimizer=generator_optimizer, generator=self.generator)
-        else:
-            checkpoint = tf.train.Checkpoint(
-                generator_optimizer=generator_optimizer, generator=self.generator, extractor=self.extractor)
-
-        # load model
-        checkpoint.restore(tf.train.latest_checkpoint(model_path))
-        print("load models....")
+            self.extractor = tf.keras.models.load_model(extractor_path)
 
     def generate(self, input_image, attack_test_func=None):
         """
@@ -250,7 +250,7 @@ class GeneratorModel(Model):
         output_tensor = self.generator(input_image, training=True)
         wm_tensor = None
         wm_feature = None
-        if self.watermark == True:
+        if self.watermark_enable == True:
             # attack test
             if attack_test_func != None:
                 output_tensor = attack_test_func(output_tensor)
@@ -259,7 +259,8 @@ class GeneratorModel(Model):
 
             # the feature size is [1,128,128,3]
             # decode watermark
-            wm_tensor = self.decoder_model.decode(wm_feature)
+            wm_tensor = decode_watermark_from_tensor(
+                wm_feature, self.wm_width, self.wm_height)
         # the out structure is still tensorflow structure [1,32,32,3]
         return output_tensor, wm_tensor, wm_feature
 
@@ -279,7 +280,7 @@ class GeneratorModel(Model):
         # resize to [128,128,3], change scale to [0,1]
         output_image = np.array(output_tensor[0, :, :, :]*0.5+0.5)
 
-        if wm_tensor != None:
+        if self.watermark_enable == True:
             wm_tensor = np.array(wm_tensor[0, :, :, :]*0.5+0.5)
 
         return output_image, wm_tensor
@@ -322,8 +323,8 @@ if __name__ == "__main__":
 
     # start model
     # model = EncoderDecoder("./trained_models/auto_mnist")
-    model = EncoderDecoder(
-        "./trained_models/models/auto_mnist_x64/", key_enable=False)
+    # model = EncoderDecoder(
+    #     "./trained_models/models/auto_mnist_x64/", key_enable=False)
 
     # # get feature
     # wm_feature = model.encode("wm_binary.png")
@@ -332,15 +333,22 @@ if __name__ == "__main__":
     # plt.imsave("wm_binary_feature.png", wm_feature)
 
     # decode feature
-    wm = model.decode_from_image(
-        "./WMNetv2/watermark/wm_binary_feature_x64.png")
+    # wm = model.decode_from_image(
+    #     "./WMNetv2/watermark/wm_binary_feature_x64.png")
 
     # f=model.encode("./WMNetv2/watermark/wm_binary_x64.png")
 
-    wm[wm < 0.5] = 0
-    wm[wm > 0.5] = 1
-    # print(wm.shape)
-    # show watermark
-    plt.imshow(wm)
-    plt.show()
+    # wm[wm < 0.5] = 0
+    # wm[wm > 0.5] = 1
+    # # print(wm.shape)
+    # # show watermark
+    # plt.imshow(wm)
+    # plt.show()
     # plt.imsave("./WMNetv2/watermark/wm_binary_feature_x64.png", f)
+
+    g = GeneratorModel(generator_path="./app/rio_w/model/generator.h5", watermark_enable=True,
+                       wm_width=32, wm_height=32, extractor_path="./app/rio_w/model/extractor.h5")
+
+    a, b = g.generate_image("./app/rio_w/log/result_image/1_IN.png")
+    plt.imshow(b)
+    plt.show()

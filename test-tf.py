@@ -48,10 +48,10 @@ import tensorflow as tf
 # plt.show()
 
 
-from CriminalArt.load_celebA import create_labels
+# from CriminalArt.load_celebA import create_labels
 
 # # print(load_labels("./data/celebA/list_attr_celeba.txt")["000001.jpg"])
-create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
+# create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
 # a=tf.io.read_file("./data/celebA/train/000001.txt")
 # # print(a)
 # a=tf.strings.split(a, sep=" ")
@@ -61,15 +61,15 @@ create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
 # a=tf.io.decode_csv(a, record_defaults=record_defaults)
 # print(a)
 
-from CriminalArt.load_celebA import load_dataset
-from eidolon import config
-c=config.ConfigLoader()
-c.data_dir="./data/celebA"
-c.batch_size=1
-d=load_dataset(c, is_training=True)
-for a, b in d:
-    # print(a)
-    print(b)
+# from CriminalArt.load_celebA import load_dataset
+# from eidolon import config
+# c=config.ConfigLoader()
+# c.data_dir="./data/celebA"
+# c.batch_size=1
+# d=load_dataset(c, is_training=True)
+# for a, b in d:
+#     # print(a)
+#     print(b)
 
 
 
@@ -85,3 +85,45 @@ for a, b in d:
 
 # plt.imshow(img)
 # plt.show()
+
+model=tf.keras.models.load_model("./generator.h5")
+# model.summary()
+
+
+# from CriminalArt import load_celebA
+
+# # f=[float(each) for each in "0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0".split(" ")]
+# # f=np.array(f)
+
+# # img=load_celebA.create_label_image_from_tensor(f)
+
+
+# img=plt.imread("in.png")[:,:,0:3]
+
+# # plt.imshow(img)
+# # plt.show()
+# img=img*2-1
+
+
+# f=np.zeros([1,128,128,3])
+# f[0]=img
+
+# for i in range(100):
+
+
+#     f_n=f+tf.random.normal([1,128,128,3])
+
+#     f_n=tf.cast(f_n, tf.float32)
+
+#     out=model(f_n, training=True)
+
+
+#     out=np.array(out[0]*0.5+0.5)
+
+#     plt.imsave("./temp/"+str(i)+".png", out)
+#     print(i)
+
+# # plt.imshow(out)
+# plt.show()
+
+    

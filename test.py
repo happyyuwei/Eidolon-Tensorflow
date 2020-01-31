@@ -16,12 +16,12 @@ import matplotlib.pyplot as plt
 # x=plt.imread("./data/celebA/train/000001.png")
 # print(x)
 
-from WMNetv2.model_use import encode_watermark_from_image,decode_watermark_from_tensor
+# from WMNetv2.model_use import encode_watermark_from_image,decode_watermark_from_tensor
 
 
-a=encode_watermark_from_image("./WMNetv2/watermark/wm_x128.png", 256, 256)
+# a=encode_watermark_from_image("./WMNetv2/watermark/wm_x128.png", 256, 256)
 
-print(a)
+# print(a)
 # plt.imshow(a[0])
 # plt.show()
 # b=decode_watermark_from_tensor(a, 128,128)

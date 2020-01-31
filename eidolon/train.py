@@ -73,6 +73,8 @@ class Container:
         # 设置映射至checkpoint
         self.checkpoint.mapped = ckpt_map
         print("Initial checkpoint....")
+        
+        #输出模型列表在控制台
         model_list_name = []
         for name in ckpt_map:
             model_list_name.append(name)

@@ -154,6 +154,19 @@ def create_labels(img_path, label_path):
                 f.writelines(line)
 
 
+def create_label_image_from_tensor(feature, width=128, height=128):
+    """
+    输入为numpy标签，一共128个像素，左边4个0，右边4个0。中间120个像素，每四3个为一个。
+    """
+    
+    # 创建图片
+    mask = np.zeros([height, width, 3])
+
+    for i in range(len(feature)):
+        mask[:, 4+3*i:4+3*(i+1), :] = feature[i]
+
+    return mask
+
 def create_label_image(label_path, width=128, height=128):
     """
     输入为标签路径，一共128个像素，左边4个0，右边4个0。中间120个像素，每四3个为一个。
