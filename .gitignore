@@ -1,6 +1,15 @@
+#只上传代码，不上传任何结果
+
+#忽略所有应用脚本
 app/*[!*.md]
+#忽略所有数据集
 data/*[!*.md]
-experiments/*/*[!*.py]
+# WMNetv2/experiments/*/*[!*.py]
+#忽略所有试验结果
+WMNetv2/experiments/fidelity/rio/results
+#忽略所有以训练模型
 trained_models/*[!*.md]
+#忽略GUI运行时，如electron
 gui/runtime/*
+#忽略所有python代码缓存
 __pycache__

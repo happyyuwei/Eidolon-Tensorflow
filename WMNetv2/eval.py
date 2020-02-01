@@ -15,7 +15,7 @@ from eidolon import train_tool
 from eidolon import eval_util
 
 
-def eval_all(data_path, model_path,  visual_result_dir=None, watermark_path=None, watermark_binary=False, attack_test_func=None):
+def eval_all(data_path, model_path,  visual_result_dir=None, watermark_path=None, wm_width=64, wm_height=64, watermark_binary=False, attack_test_func=None):
     """
     评估函数, 评估模型的PSNR与SSIM, 若存在水印，则评估水印的PSNR或BER
     @since 2019.11.27
@@ -44,10 +44,15 @@ def eval_all(data_path, model_path,  visual_result_dir=None, watermark_path=None
             watermark_path, 32, 32, binary=watermark_binary, change_scale=True)
         print("load watermark....")
 
+    generator_path = os.path.join(model_path, "generator.h5")
+    extractor_path = None
+    if watermark_enable == True:
+        extractor_path = os.path.join(model_path, "extractor.h5")
+
     # load model
     print("load model....")
-    model = model_use.GeneratorModel(generator_path=os.path.join(
-        model_path, "generator.h5"), watermark_enable=watermark_enable, extractor_path=os.path.join(model_path, "extractor.h5"))
+    model = model_use.GeneratorModel(
+        generator_path=generator_path, wm_width=wm_width, wm_height=wm_height, watermark_enable=watermark_enable, extractor_path=extractor_path, binary=watermark_binary)
 
     if visual_result_dir != None and os.path.exists(visual_result_dir) == False:
         os.mkdir(visual_result_dir)

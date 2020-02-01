@@ -31,7 +31,6 @@ class Model:
             sys.exit()
 
 
-
 class EncoderDecoder(Model):
 
     def __init__(self,  model_path, input_shape=[64, 64], key_enable=False):
@@ -190,7 +189,7 @@ def encode_watermark_from_image(path, width, height, change_scale=True):
     return wm
 
 
-def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
+def decode_watermark_from_tensor(wm_tensor, out_width, out_height, binary=False):
     """
     将以编码的水印解码成图片
     :return out 输出解码的水印，为4维tensor
@@ -210,7 +209,28 @@ def decode_watermark_from_tensor(wm_tensor, out_width, out_height):
                 wm[:, i*out_height:(i+1)*out_height, j *
                    out_width:(j+1)*out_width, :]
 
-    out = out/(row*col)
+    out = out/(row*col) 
+
+    #变为二值
+    if binary == True:
+        
+        #转灰度
+        temp=out[:,:,:,0]+out[:,:,:,1]+out[:,:,:,2]
+        temp=temp/3
+
+        #重新转成nparray,这句话不能删, 找不到原因，fuck
+        # @since 2019.1.32
+        # @author yuwei
+        temp=np.array(temp)
+        
+        #由于输入tensor范围【-1，1】,以0为分解线
+        temp[temp < 0] = -1
+        temp[temp >= 0] = 1
+
+        out=np.array(out)
+        out[:,:,:,0]=temp
+        out[:,:,:,1]=temp
+        out[:,:,:,2]=temp
 
     return out
 
@@ -220,7 +240,7 @@ class GeneratorModel:
     生成模型
     """
 
-    def __init__(self, generator_path, watermark_enable=False, wm_width=64, wm_height=64, extractor_path=None):
+    def __init__(self, generator_path, watermark_enable=False, wm_width=64, wm_height=64, extractor_path=None, binary=False):
         # # parent init function
         # super(GeneratorModel, self).__init__(model_path)
 
@@ -228,6 +248,7 @@ class GeneratorModel:
 
         self.wm_width = wm_width
         self.wm_height = wm_height
+        self.binary=binary
 
         print("load generator....")
         self.generator = tf.keras.models.load_model(generator_path)
@@ -260,7 +281,7 @@ class GeneratorModel:
             # the feature size is [1,128,128,3]
             # decode watermark
             wm_tensor = decode_watermark_from_tensor(
-                wm_feature, self.wm_width, self.wm_height)
+                wm_feature, self.wm_width, self.wm_height, binary=self.binary)
         # the out structure is still tensorflow structure [1,32,32,3]
         return output_tensor, wm_tensor, wm_feature
 
@@ -347,7 +368,7 @@ if __name__ == "__main__":
     # plt.imsave("./WMNetv2/watermark/wm_binary_feature_x64.png", f)
 
     g = GeneratorModel(generator_path="./app/rio_w/model/generator.h5", watermark_enable=True,
-                       wm_width=32, wm_height=32, extractor_path="./app/rio_w/model/extractor.h5")
+                       wm_width=32, wm_height=32, extractor_path="./app/rio_w/model/extractor.h5", binary=True)
 
     a, b = g.generate_image("./app/rio_w/log/result_image/1_IN.png")
     plt.imshow(b)
