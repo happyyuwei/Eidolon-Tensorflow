@@ -41,7 +41,7 @@ def eval_all(data_path, model_path,  visual_result_dir=None, watermark_path=None
         change_scale没有指定，因此读取的水印为[0,1], 与要求[-1,1]不符，使得后续计算误码率有误。现已修复。
         """
         wm_target = train_tool.read_image(
-            watermark_path, 32, 32, binary=watermark_binary, change_scale=True)
+            watermark_path, wm_width, wm_height, binary=watermark_binary, change_scale=True)
         print("load watermark....")
 
     generator_path = os.path.join(model_path, "generator.h5")
@@ -92,6 +92,7 @@ def eval_all(data_path, model_path,  visual_result_dir=None, watermark_path=None
         # caluclate total value
         image_mean_psnr = image_mean_psnr+result_each["image_psnr"]
         image_mean_ssim = image_mean_ssim+result_each["image_ssim"]
+
 
         if watermark_path != None:
             # eval watermark
