@@ -77,7 +77,7 @@ class EncoderDecoder(Model):
         # change scale to [-1,1]
         encode_image = encode_image[:, :, 0:3] * 2 - 1
 
-        h, w, c = np.shape(encode_image)
+        h, w, _ = np.shape(encode_image)
 
         # reshape to 4 dim
         encode_image = tf.reshape(encode_image, [1, h, w, 3])
@@ -368,8 +368,9 @@ if __name__ == "__main__":
     # plt.imsave("./WMNetv2/watermark/wm_binary_feature_x64.png", f)
 
     g = GeneratorModel(generator_path="./app/rio_w/model/generator.h5", watermark_enable=True,
-                       wm_width=32, wm_height=32, extractor_path="./app/rio_w/model/extractor.h5", binary=True)
+                       wm_width=64, wm_height=64, extractor_path="./app/rio_w/model/extractor.h5", binary=True)
 
     a, b = g.generate_image("./app/rio_w/log/result_image/1_IN.png")
-    plt.imshow(b)
-    plt.show()
+    print(b.shape)
+    # plt.imshow(b)
+    # plt.show()
