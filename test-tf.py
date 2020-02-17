@@ -86,7 +86,7 @@ import tensorflow as tf
 # plt.imshow(img)
 # plt.show()
 
-model=tf.keras.models.load_model("./generator.h5")
+model=tf.keras.models.load_model("./g.h5")
 # model.summary()
 
 
@@ -98,32 +98,43 @@ model=tf.keras.models.load_model("./generator.h5")
 # # img=load_celebA.create_label_image_from_tensor(f)
 
 
-# img=plt.imread("in.png")[:,:,0:3]
+img=plt.imread("in.png")[:,:,0:3]
 
-# # plt.imshow(img)
-# # plt.show()
-# img=img*2-1
-
-
-# f=np.zeros([1,128,128,3])
-# f[0]=img
-
-# for i in range(100):
+# plt.imshow(img)
+# plt.show()
+img=img*2-1
 
 
-#     f_n=f+tf.random.normal([1,128,128,3])
+f=np.zeros([1,128,128,3])
+f[0]=img
+# out=model(f, training=True)
+# out=np.array(out[0]*0.5+0.5)
+# plt.imshow(out)
+# plt.show()
 
-#     f_n=tf.cast(f_n, tf.float32)
 
-#     out=model(f_n, training=True)
+for i in range(100):
 
 
-#     out=np.array(out[0]*0.5+0.5)
+    # f_n=f+tf.random.normal([1,128,128,3])
+    f_n=tf.random.normal([1,128,128,3])*2
 
-#     plt.imsave("./temp/"+str(i)+".png", out)
-#     print(i)
+    f_n=tf.cast(f_n, tf.float32)
+
+    out=model(f_n, training=True)
+
+
+    out=np.array(out[0]*0.5+0.5)
+
+    plt.imsave("./temp/"+str(i)+".png", out)
+    print(i)
 
 # # plt.imshow(out)
 # plt.show()
+# a=tf.io.read_file("1.png")
+# a=tf.io.decode_png(a)
+# x=tf.image.psnr(a, a, max_val=255)
+
+# print(x)
 
     

@@ -35,3 +35,4 @@ import matplotlib.pyplot as plt
 # a=train_tool.read_image("./WMNetv2/watermark/wm_binary_x128.png", 128,128, binary=True, threshold=0.5)
 # plt.imshow(a[0])
 # plt.show()
+
