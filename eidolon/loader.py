@@ -42,6 +42,7 @@ def load_image(image_file, image_type, input_num, is_train, image_width, image_h
         sys.exit()
 
     # only three channel currently
+    # 本分软件保存的图片包含四个通道（RGBA），目前只取三个通道，去除透明度通道。
     # author yuwei
     # @since 2019.9.14
     image = image[:, :, 0:3]
@@ -181,6 +182,14 @@ class ImageLoader:
 
         # return batch
         return dataset.batch(config_loader.batch_size)
+
+
+
+"""
+The functions below may be deleted in the future.
+@since 2020.2.17
+@author yuwei
+"""
 
 
 def load_cifar(cifar_file, train_num, test_num, image_shape=[32,32]):

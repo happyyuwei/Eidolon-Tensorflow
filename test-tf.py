@@ -56,7 +56,7 @@ import tensorflow as tf
 # # print(a)
 # a=tf.strings.split(a, sep=" ")
 # # print(a)
-# record_defaults = list([0.0] for i in range(1)) 
+# record_defaults = list([0.0] for i in range(1))
 # print(record_defaults)
 # a=tf.io.decode_csv(a, record_defaults=record_defaults)
 # print(a)
@@ -72,7 +72,6 @@ import tensorflow as tf
 #     print(b)
 
 
-
 # from CriminalArt import evaluate
 
 # f=[float(each) for each in "0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0".split(" ")]
@@ -85,56 +84,21 @@ import tensorflow as tf
 
 # plt.imshow(img)
 # plt.show()
+from eidolon import loader
+from eidolon import config
+from hide import secret_load
+import os
+config_loader = config.ConfigLoader()
+config_loader.data_dir="./data/animate-face"
+config_loader.image_height = 256
+config_loader.image_width = 256
 
-model=tf.keras.models.load_model("./g.h5")
-# model.summary()
+train_loader = loader.ImageLoader(os.path.join(
+    config_loader.data_dir, "train"), is_training=True)
 
+train_dataset = train_loader.load(config_loader, load_function=secret_load.load_image)
 
-# from CriminalArt import load_celebA
+for a,b in train_dataset:
+    print(a)
+    print(b)
 
-# # f=[float(each) for each in "0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0".split(" ")]
-# # f=np.array(f)
-
-# # img=load_celebA.create_label_image_from_tensor(f)
-
-
-img=plt.imread("in.png")[:,:,0:3]
-
-# plt.imshow(img)
-# plt.show()
-img=img*2-1
-
-
-f=np.zeros([1,128,128,3])
-f[0]=img
-# out=model(f, training=True)
-# out=np.array(out[0]*0.5+0.5)
-# plt.imshow(out)
-# plt.show()
-
-
-for i in range(100):
-
-
-    # f_n=f+tf.random.normal([1,128,128,3])
-    f_n=tf.random.normal([1,128,128,3])*2
-
-    f_n=tf.cast(f_n, tf.float32)
-
-    out=model(f_n, training=True)
-
-
-    out=np.array(out[0]*0.5+0.5)
-
-    plt.imsave("./temp/"+str(i)+".png", out)
-    print(i)
-
-# # plt.imshow(out)
-# plt.show()
-# a=tf.io.read_file("1.png")
-# a=tf.io.decode_png(a)
-# x=tf.image.psnr(a, a, max_val=255)
-
-# print(x)
-
-    
