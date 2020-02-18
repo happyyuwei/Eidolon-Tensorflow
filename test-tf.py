@@ -27,63 +27,14 @@ import tensorflow as tf
 # # layer_outputs=[layer.output for layer in model.layers[0:3]]
 # # # print(layer_outputs)
 
-# m1=tf.keras.Model(inputs=model.input, outputs=model.layers[18].output)
-# m1.summary()
-# o=m1(img)
-# plt.imshow(o[0,:,:,61:64])
-# plt.show()
-# model=tf.keras.models.load_model("../face.h5")
+# import matplotlib.pyplot as plt
 
-# a=plt.imread("../1.jpg")
-# a=tf.image.resize(a, [256,256])
+# a=plt.imread("198_GT.png")
+# b=plt.imread("198_PR.png")
 
-# a=a/127.5-1
-# a=tf.reshape(a, [1,256,256,3])
-
-# b=model(a)
-
-# b=b[0]*0.5+0.5
-
-# plt.imshow(b)
-# plt.show()
+# print(np.average(np.abs(a-b)))
 
 
-# from CriminalArt.load_celebA import create_labels
-
-# # print(load_labels("./data/celebA/list_attr_celeba.txt")["000001.jpg"])
-# create_labels("./data/celebA/test","./data/celebA/list_attr_celeba.txt")
-# a=tf.io.read_file("./data/celebA/train/000001.txt")
-# # print(a)
-# a=tf.strings.split(a, sep=" ")
-# # print(a)
-# record_defaults = list([0.0] for i in range(1))
-# print(record_defaults)
-# a=tf.io.decode_csv(a, record_defaults=record_defaults)
-# print(a)
-
-# from CriminalArt.load_celebA import load_dataset
-# from eidolon import config
-# c=config.ConfigLoader()
-# c.data_dir="./data/celebA"
-# c.batch_size=1
-# d=load_dataset(c, is_training=True)
-# for a, b in d:
-#     # print(a)
-#     print(b)
-
-
-# from CriminalArt import evaluate
-
-# f=[float(each) for each in "0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0".split(" ")]
-# f=np.array(f)
-
-# # image=plt.imread("./data/celebA/train/000001.jpg")
-
-# img=evaluate.create_visual(f)
-# # print(img)
-
-# plt.imshow(img)
-# plt.show()
 from eidolon import loader
 from eidolon import config
 from hide import secret_load
@@ -93,12 +44,25 @@ config_loader.data_dir="./data/animate-face"
 config_loader.image_height = 256
 config_loader.image_width = 256
 
-train_loader = loader.ImageLoader(os.path.join(
-    config_loader.data_dir, "train"), is_training=True)
+# train_loader = loader.ImageLoader(os.path.join(
+#     config_loader.data_dir, "train"), is_training=True)
 
-train_dataset = train_loader.load(config_loader, load_function=secret_load.load_image)
+# train_dataset = train_loader.load(config_loader, load_function=secret_load.load_image)
 
-for a,b in train_dataset:
-    print(a)
-    print(b)
+# for a,b in train_dataset:
+#     # plt.figure(1)
+#     # plt.imshow(a[0,:,:,0:3]*0.5+0.5)
+#     # plt.figure(2)
+#     # plt.imshow(a[0,:,:,3:6]*0.5+0.5)
+#     # plt.figure(3)
+#     # plt.imshow(b[0]*0.5+0.5)
+#     # plt.show()
+#     pass
 
+config_loader.data_dir="./hide/img/"
+config_loader.image_type="png"
+secret_loader = loader.ImageLoader(config_loader.data_dir, is_training=True)
+secret_dataset=secret_loader.load(config_loader, load_function=secret_load.load_secret_image)
+print(secret_dataset)
+for x in secret_dataset.take(1):
+    print(x)

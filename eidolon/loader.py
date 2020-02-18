@@ -4,27 +4,11 @@ import os
 import sys
 import pickle
 
-
-def load_image(image_file, image_type, input_num, is_train, image_width, image_height, flap_probability, crop_width, crop_height):
+def load(image_file, image_type):
     """
-    @update 2019.12.22
-    新增支持多种图片格式，可选jpg,png,bmp。
-
-    loader images, the left is grand truth, the right list is input,
-    currently, one or two inputs are supported,
-    use input_num to point out.
-    :param image_file:
-    :param image_type:
-    :param input_num:
-    :param is_train:
-    :param image_width:
-    :param image_height:
-    :param flap_probability
-    :param input_concat
-    :param crop_width
-    :param crop_height
-    :return:
+    载入图片
     """
+
     # 读取图片
     image = tf.io.read_file(image_file)
 
@@ -46,6 +30,31 @@ def load_image(image_file, image_type, input_num, is_train, image_width, image_h
     # author yuwei
     # @since 2019.9.14
     image = image[:, :, 0:3]
+    return image
+
+
+
+def load_image(image_file, image_type, input_num, is_train, image_width, image_height, flap_probability, crop_width, crop_height):
+    """
+    @update 2019.12.22
+    新增支持多种图片格式，可选jpg,png,bmp。
+
+    loader images, the left is grand truth, the right list is input,
+    currently, one or two inputs are supported,
+    use input_num to point out.
+    :param image_file:
+    :param image_type:
+    :param input_num:
+    :param is_train:
+    :param image_width:
+    :param image_height:
+    :param flap_probability
+    :param input_concat
+    :param crop_width
+    :param crop_height
+    :return:
+    """
+    image=load(image_file, image_type)
 
     # get image width
     w = tf.shape(image)[1]

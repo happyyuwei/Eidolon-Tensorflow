@@ -7,6 +7,7 @@ data/*[!*.md]
 # WMNetv2/experiments/*/*[!*.py]
 #忽略所有试验结果
 WMNetv2/experiments/fidelity/rio/results
+
 #忽略所有以训练模型
 trained_models/*[!*.md]
 #忽略GUI运行时，如electron

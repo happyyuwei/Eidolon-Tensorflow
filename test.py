@@ -49,18 +49,7 @@ import matplotlib.pyplot as plt
 #     #写入文件
 #     with open("./test/{}.png".format(i), 'wb') as f:
 #         img.save(f)
-
-import os
-
-path="./hide/secret/"
-list=os.listdir(path)
-i=1
-for each in list:
-    img=plt.imread(os.path.join(path, each))
-    temp=np.zeros([290,290,3])
-    temp[:,:,0]=img
-    temp[:,:,1]=img
-    temp[:,:,2]=img
-    plt.imsave("./hide/img/{}.png".format(i), temp)
-    i=i+1
+import random
+for i in range(10):
+    print(random.randint(1, 2))
 
