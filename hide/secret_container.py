@@ -36,12 +36,12 @@ class SecretContainer(train.Container):
         # 加载秘密图像数据集
         secret_train_loader = loader.ImageLoader("../../data/QR/train", is_training=True)
         self.secret_train_dataset = secret_train_loader.load(
-            image_type="png", load_function=loader.load_single_image)
+            image_type="png", batch_size=self.config_loader.batch_size, load_function=loader.load_single_image)
 
          # 加载秘密图像数据集
         secret_test_loader = loader.ImageLoader("../../data/QR/test", is_training=False)
         self.secret_test_dataset = secret_test_loader.load(
-            image_type="png", load_function=loader.load_single_image)
+            image_type="png",batch_size=self.config_loader.batch_size, load_function=loader.load_single_image)
 
         # 创建编码网络
         self.encoder = UNet(input_shape=[self.config_loader.image_width, self.config_loader.image_height, 6],
