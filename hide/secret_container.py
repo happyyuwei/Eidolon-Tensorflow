@@ -8,7 +8,6 @@ from eidolon import loss_util
 from eidolon import eval_util
 from eidolon.model.pixel import UNet
 
-from hide import secret_load
 
 import os
 
@@ -35,12 +34,14 @@ class SecretContainer(train.Container):
         self.on_prepare_dataset()
 
         # 加载秘密图像数据集
-        temp = self.config_loader.image_type
-        self.config_loader.image_type = "png"
-        secret_loader = loader.ImageLoader("../../hide/img/", is_training=True)
-        self.secret_dataset = secret_loader.load(
-            self.config_loader, load_function=secret_load.load_secret_image)
-        self.config_loader.image_type = temp
+        secret_train_loader = loader.ImageLoader("../../data/QR/train", is_training=True)
+        self.secret_train_dataset = secret_train_loader.load(
+            image_type="png", load_function=loader.load_single_image)
+
+         # 加载秘密图像数据集
+        secret_test_loader = loader.ImageLoader("../../data/QR/test", is_training=False)
+        self.secret_test_dataset = secret_test_loader.load(
+            image_type="png", load_function=loader.load_single_image)
 
         # 创建编码网络
         self.encoder = UNet(input_shape=[self.config_loader.image_width, self.config_loader.image_height, 6],
@@ -50,7 +51,7 @@ class SecretContainer(train.Container):
         self.log_tool.plot_model(self.encoder, "encoder")
         print("Encoder structure plot....")
 
-        # 创建解码网络
+        # 创建解码网络, 解码网络也是任务网络
         self.decoder = UNet(input_shape=self.config_loader.config["dataset"]["image_size"]["value"],
                             high_performance_enable=self.config_loader.high_performance)
 
@@ -71,25 +72,38 @@ class SecretContainer(train.Container):
         super(SecretContainer, self).on_prepare()
 
     def compute_loss(self, input_image, target, secret_image):
+        """
+        param: input_image: 输入图像
+        param: target: 输出图像
+        param: secret_image: 秘密图像
+        """
 
-        # 任务网络
+        # 训练任务网络==================================================================
+        # 任务网络，常规风格转移网络任务
         task_output = self.decoder(input_image, training=True)
+        # 任务网络损失，常规像素损失
         task_loss = loss_util.pixel_loss(task_output, target)
 
-        # 输入合并
+        # 功能伪装，将信息隐藏提取网络隐藏至任务网络中=====================================
+        # 输入合并，当前版本只是简单把原图和秘密图像叠加在一起，一起输入至隐藏网络
         input_tensor = tf.concat([input_image, secret_image], axis=-1)
 
+        # 秘密隐藏网络
         # 计算生成网络输出图像
-        gen_output = self.encoder(input_tensor, training=True)
+        stego = self.encoder(input_tensor, training=True)
 
+        # 信息隐藏损失：含秘图像与原图无法在视觉上体现差异
         # mean absolute error
-        encoder_loss = loss_util.pixel_loss(gen_output, input_image)
+        encoder_loss = loss_util.pixel_loss(stego, input_image)
 
-        # 解码
-        secret = self.decoder(gen_output, training=True)
+        # 秘密提取网络
+        # 提取秘密信息
+        extracted_secret = self.decoder(stego, training=True)
 
-        decoder_loss = loss_util.pixel_loss(secret, secret_image)
+        # 信息提取损失：提取出来的秘密信息与原信息保持一致
+        decoder_loss = loss_util.pixel_loss(extracted_secret, secret_image)
 
+        # 总损失为三者之和
         total_loss = encoder_loss+decoder_loss+task_loss
 
         # 合并结果集
@@ -97,7 +111,7 @@ class SecretContainer(train.Container):
         loss_set["total_loss"] = total_loss
         loss_set["encoder_loss"] = encoder_loss
         loss_set["decoder_loss"] = decoder_loss
-        loss_set["task_loss"]=task_loss
+        loss_set["task_loss"] = task_loss
 
         # 记录损失和输出
         result_set = {
@@ -118,21 +132,22 @@ class SecretContainer(train.Container):
         每次训练会随机抽取一张图像作为秘密图像
         """
 
-        for each in self.secret_dataset.take(1):
+        for secret_image in self.secret_train_dataset.take(1):
             pass
 
-        return each
+        # 该返回值会传递至on_train_batch（）的第二个参数（除self参数）
+        return secret_image
 
+    # 推荐添加该注解，经过测试，可节省40%时间.
     @tf.function
     def on_train_batch(self, each_pair, secret_image):
         """
         训练一批数据，该函数允许使用tensorflow加速
         """
-        input_image, target=each_pair
+        input_image, target = each_pair
 
         # 创建梯度计算器，负责计算损失函数当前梯度
         with tf.GradientTape() as gen_tape:
-
             # 计算损失
             result_set = self.compute_loss(input_image, target, secret_image)
 
@@ -159,29 +174,33 @@ class SecretContainer(train.Container):
         定量测试，默认测试PSNR和SSIM
         """
         # 计算测试集上的PNSR与ssim
-        psnr = 0
+        stego_psnr = 0
         ber = 0
         batch = 0
         for _, (test_input, test_target) in self.test_dataset.enumerate():
 
-            for secret_image in self.secret_dataset.take(1):
+            # 从秘密图片中随机选择一张进行评估
+            for secret_image in self.secret_test_dataset.take(1):
                 # 输入合并
                 input_tensor = tf.concat([test_input, secret_image], axis=-1)
                 # 生成测试结果
-                predicted_image = self.encoder(input_tensor, training=True)
-                result_set = eval_util.evaluate(predicted_image, test_input)
-                psnr = psnr+tf.reduce_mean(result_set["psnr"])
+                stego = self.encoder(input_tensor, training=True)
 
-                secret = self.decoder(predicted_image, training=True)
+                # 评估stego的质量
+                result_set = eval_util.evaluate(stego, test_input)
+                stego_psnr = stego_psnr+tf.reduce_mean(result_set["psnr"])
+
+                # 评估提取秘密信息的质量
+                extracted_secret = self.decoder(stego, training=True)
                 result_set = eval_util.evaluate(
-                    secret, secret_image, psnr_enable=False, ssim_enable=False, ber_enable=True)
+                    extracted_secret, secret_image, psnr_enable=False, ssim_enable=False, ber_enable=True)
                 ber = ber+tf.reduce_mean(result_set["ber"])
                 batch = batch+1
 
-        psnr = psnr/batch
+        psnr = stego_psnr/batch
         ber = ber/batch
 
-        loss_set["cover_psnr"] = psnr
+        loss_set["stego_psnr"] = psnr
         loss_set["secret_ber"] = ber
 
         return loss_set
@@ -193,9 +212,9 @@ class SecretContainer(train.Container):
         # 测试可视化结果
         for test_input, test_target in self.test_dataset.take(1):
 
-            for secret_image in self.secret_dataset.take(1):
-                
-                #task
+            for secret_image in self.secret_test_dataset.take(1):
+
+                # task
                 task_output = self.decoder(test_input, training=True)
 
                 # 输入合并
@@ -208,7 +227,8 @@ class SecretContainer(train.Container):
                 secret = self.decoder(predicted_image, training=True)
 
         # 排成列表
-        image_list = [test_input, predicted_image, secret_image, secret, task_output, test_target]
+        image_list = [test_input, predicted_image,
+                      secret_image, secret, task_output, test_target]
         title_list = ["C", "CS", "S_GT", "S_PR", "T_PR", "T_GT"]
         return image_list, title_list
 

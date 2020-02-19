@@ -4,9 +4,11 @@ import os
 import sys
 import pickle
 
-def load(image_file, image_type):
+
+def read_image(image_file, image_type):
     """
-    载入图片
+    载入图片，支持jpg, png, bmp
+    核心调用tf.io.read_file()函数
     """
 
     # 读取图片
@@ -33,9 +35,26 @@ def load(image_file, image_type):
     return image
 
 
-
-def load_image(image_file, image_type, input_num, is_train, image_width, image_height, flap_probability, crop_width, crop_height):
+def load_single_image(image_file):
     """
+    读取单一图片
+    """
+    # 载入
+    image = read_image(image_file, "png")
+    # 转换类型
+    image = tf.cast(image, tf.float32)
+    # 转换大小
+    image = tf.image.resize(image, size=[256, 256])
+    # 转化到【-1,1】
+    image = (image / 127.5) - 1
+
+    return image
+
+
+def load_image_default(image_file, image_type, input_num, is_train, image_width, image_height, flap_probability, crop_width, crop_height):
+    """
+    默认图区图片方式，为输出-输入图片对合并为一张的图片，该函数会自动拆解成两张
+
     @update 2019.12.22
     新增支持多种图片格式，可选jpg,png,bmp。
 
@@ -54,7 +73,7 @@ def load_image(image_file, image_type, input_num, is_train, image_width, image_h
     :param crop_height
     :return:
     """
-    image=load(image_file, image_type)
+    image = read_image(image_file, image_type)
 
     # get image width
     w = tf.shape(image)[1]
@@ -141,16 +160,30 @@ class ImageLoader:
         self.data_dir = data_dir
         self.is_training = is_training
 
-    def load(self, config_loader, load_function=None):
+    def load(self, config_loader=None, load_function=None, buffer_size=0, batch_size=1, image_type="jpg", input_num=1, is_train=True, image_width=256, image_height=256, flap_probability=0, crop_width=0, crop_height=0):
         """
-        載入
-        :param config_loader:
-        :return:
+        @update 2019.2.19
+        去除对config_loader配置类的依赖
+
+        允许使用config_loader作为参数输入， 也可以直接传递参数作为输入。
+        如果config_loader不为None，则后面的参数默认无效。
         """
         # 判断数据存在
         if os.path.exists(self.data_dir) == False:
             print("Error: Dataset not exist. {}".format(self.data_dir))
             sys.exit()
+
+        #若输入的参数是config_loader，则先提取有效参数
+        if config_loader!=None:
+            buffer_size=config_loader.buffer_size
+            batch_size=config_loader.batch_size
+            image_type=config_loader.image_type
+            input_num=config_loader.input_num
+            image_width=config_loader.image_width
+            image_height=config_loader.image_height
+            flap_probability=config_loader.data_flip
+            crop_width=config_loader.crop_width
+            crop_height=config_loader.crop_height
 
         # get dataset file list
         """
@@ -159,11 +192,10 @@ class ImageLoader:
         目前尚未解决该问题。
         因此指定该操作在CPU上执行
         @author yuwei
-        # """
+        """
         with tf.device("CPU:0"):
             dataset = tf.data.Dataset.list_files(
-                os.path.join(self.data_dir, "*.{}".format(config_loader.image_type)))
-
+                os.path.join(self.data_dir, "*.{}".format(image_type)))
 
         # recalculate buffer size
         # if buffer_size<=0， adapted the buffer size
@@ -172,26 +204,22 @@ class ImageLoader:
         # @since 2019.1.18
         # @author yuwei
         # @version 0.93
-        if config_loader.buffer_size <= 0:
-            config_loader.buffer_size = len(os.listdir(self.data_dir))
+        if buffer_size <= 0:
+            buffer_size = len(os.listdir(self.data_dir))
 
         # shuffle the list if necessary
         if self.is_training == True:
-            dataset = dataset.shuffle(buffer_size=config_loader.buffer_size)
+            dataset = dataset.shuffle(buffer_size=buffer_size)
 
         # pretreat images
-        if load_function==None:
-            dataset = dataset.map(
-                lambda x: load_image(x, config_loader.image_type, config_loader.input_num, self.is_training, config_loader.image_width,
-                                    config_loader.image_height, config_loader.data_flip, config_loader.crop_width,
-                                    config_loader.crop_height)
-                                    )
+        if load_function == None:
+            dataset = dataset.map(lambda x: load_image_default(
+                x, image_type, input_num, self.is_training, image_width, image_height, flap_probability, crop_width, crop_height))
         else:
             dataset = dataset.map(lambda x: load_function(x))
 
         # return batch
-        return dataset.batch(config_loader.batch_size)
-
+        return dataset.batch(batch_size)
 
 
 """
@@ -201,7 +229,7 @@ The functions below may be deleted in the future.
 """
 
 
-def load_cifar(cifar_file, train_num, test_num, image_shape=[32,32]):
+def load_cifar(cifar_file, train_num, test_num, image_shape=[32, 32]):
     """
     this function is to use to load cifar images to tensor, scale=[-1,1]
     @update 2019.12.24
@@ -243,19 +271,19 @@ def load_cifar(cifar_file, train_num, test_num, image_shape=[32,32]):
     # to image array, the first axis is image number, then the three change is RGB
     for i in range(len(image_array)):
         image_array[i, :, :, :] = image_list[i]
-    
+
     # to float32 tensor
     image_array = tf.convert_to_tensor(image_array.astype("float32"))
     # 修改尺寸
-    image_array=tf.image.resize(image_array, image_shape)
+    image_array = tf.image.resize(image_array, image_shape)
 
-    #变成【-1,1】
+    # 变成【-1,1】
     image_array = (image_array - 127.5) / 127.5
 
     return image_array[0:train_num, :, :, :], image_array[train_num:train_num + test_num, :, :, :]
 
 
-def load_mnist(mnist_file, train_num, test_num, image_shape=[32,32]):
+def load_mnist(mnist_file, train_num, test_num, image_shape=[32, 32]):
     """
     load the mnist dataset and change it to binary images，, scale=[-1,1]
 
