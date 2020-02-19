@@ -113,14 +113,22 @@ class SecretContainer(train.Container):
         """
         return self.encoder.trainable_variables+self.decoder.trainable_variables
 
-    # @tf.function
-    def on_train_batch(self, input_image, target):
+    def on_prepare_batch(self):
+        """
+        每次训练会随机抽取一张图像作为秘密图像
+        """
+
+        for each in self.secret_dataset.take(1):
+            pass
+
+        return each
+
+    @tf.function
+    def on_train_batch(self, each_pair, secret_image):
         """
         训练一批数据，该函数允许使用tensorflow加速
         """
-        secret_image = None
-        for each in self.secret_dataset.take(1):
-            secret_image = each
+        input_image, target=each_pair
 
         # 创建梯度计算器，负责计算损失函数当前梯度
         with tf.GradientTape() as gen_tape:
@@ -143,7 +151,7 @@ class SecretContainer(train.Container):
         self.optimizer.apply_gradients(
             zip(generator_gradients, generator_variables))
 
-        # 继续返回损失，共外部工具记录
+        # 继续返回损失，供外部工具记录
         return loss_set
 
     def test_metrics(self, loss_set):

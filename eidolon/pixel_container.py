@@ -146,10 +146,11 @@ class PixelContainer(train.Container):
         
 
     @tf.function
-    def on_train_batch(self, input_image, target):
+    def on_train_batch(self, each_pair, _):
         """
         训练一批数据，该函数允许使用tensorflow加速
         """
+        input_image, target=each_pair
         # 创建梯度计算器，负责计算损失函数当前梯度
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
 

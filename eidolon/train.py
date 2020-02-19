@@ -94,8 +94,20 @@ class Container:
                 print("No checkpoints found in {}. Training from beginning.".format(
                     self.config_loader.checkpoints_dir))
 
+    def on_prepare_batch(self):
+        """
+        每轮训练时的准备.
+        在on_train_batch前调用.
+        返回的内容会传入on_train_batch的第二个参数中。
+        @since 2019.2.19
+        @author yuwei
+        该函数引入是为了解决部分操作无法在使用@tf.function加速的代码段中进行。
+        默认函数返回空
+        """
+        return "None"
+
     @tf.function
-    def on_train_batch(self, input_image, target):
+    def on_train_batch(self, each_pair, prepare_batch_data):
         """
         每一批的损失, 该函数需要返回损失函数结果的字典。
         该方法默认不提供内容
@@ -112,11 +124,13 @@ class Container:
         """
         重写训练父类方法
         """
-        for image_num, (input_image, target) in self.train_dataset.enumerate():
-             # @since 2019.11.28 将该打印流变成原地刷新
+        for image_num, each_pair in self.train_dataset.enumerate():
+            # @since 2019.11.28 将该打印流变成原地刷新
             print("\r"+"input_image {}...".format(image_num), end="", flush=True)
+            # 准备一个batch
+            prepare_batch_data=self.on_prepare_batch()
             # 训练一个batch
-            loss_set = self.on_train_batch(input_image, target)
+            loss_set = self.on_train_batch(each_pair, prepare_batch_data)
         # change line
         print()
         # 返回 loss结果集
