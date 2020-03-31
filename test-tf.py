@@ -37,7 +37,7 @@ import tensorflow as tf
 
 from eidolon import loader
 from eidolon import config
-from hide import secret_load
+# from hide import secret_load
 import os
 config_loader = config.ConfigLoader()
 config_loader.data_dir="./data/animate-face"
@@ -59,10 +59,49 @@ config_loader.image_width = 256
 #     # plt.show()
 #     pass
 
-config_loader.data_dir="./hide/img/"
-config_loader.image_type="png"
-secret_loader = loader.ImageLoader(config_loader.data_dir, is_training=True)
-secret_dataset=secret_loader.load(config_loader, load_function=secret_load.load_secret_image)
-print(secret_dataset)
-for x in secret_dataset.take(1):
-    print(x)
+# config_loader.data_dir="./hide/img/"
+# config_loader.image_type="png"
+# secret_loader = loader.ImageLoader(config_loader.data_dir, is_training=True)
+# secret_dataset=secret_loader.load(config_loader, load_function=secret_load.load_secret_image)
+# print(secret_dataset)
+# for x in secret_dataset.take(1):
+#     print(x)
+
+
+model=tf.keras.models.load_model("./app/car/model/generator.h5")
+
+list=[]
+for x in range(1,29):
+    list.append("{}.png".format(x))
+
+
+l=loader.ImageLoader("./data/car/test",is_training=False, file_list=list)
+d=l.load(image_type="png")
+
+
+i=1
+for x,_ in d:
+
+    y=model(x)
+
+    x=np.array(x[0])*0.5+0.5
+    x[x<0]=0
+    x[x>1]=1
+
+
+    y=np.array(y[0])*0.5+0.5
+    y[y<0]=0
+    y[y>1]=1
+    # print(y)
+    plt.imsave("./temp1/{}.png".format(i), x)
+    plt.imsave("./temp2/{}.png".format(i), y)
+    # plt.imshow(y)
+    # plt.show()
+    print(i)
+    i=i+1
+
+
+
+
+
+

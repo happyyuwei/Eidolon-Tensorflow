@@ -152,13 +152,20 @@ class ImageLoader:
     左边：输出，右边：输入。若输入为多张图，则右边一次为输入1，输入2...
     """
 
-    def __init__(self, data_dir, is_training):
+    def __init__(self, data_dir, is_training,  file_list=None):
         """
         :param train_dir:
         :param is_training:
+        :param file_list
         """
         self.data_dir = data_dir
         self.is_training = is_training
+
+        if file_list!=None:
+            for i in range(len(file_list)):
+                file_list[i]=os.path.join(data_dir,file_list[i])
+
+        self.file_list=file_list
 
     def load(self, config_loader=None, load_function=None, buffer_size=0, batch_size=1, image_type="jpg", input_num=1, is_train=True, image_width=256, image_height=256, flap_probability=0, crop_width=0, crop_height=0):
         """
@@ -194,8 +201,12 @@ class ImageLoader:
         @author yuwei
         """
         with tf.device("CPU:0"):
-            dataset = tf.data.Dataset.list_files(
-                os.path.join(self.data_dir, "*.{}".format(image_type)))
+
+            if self.file_list==None:
+                dataset = tf.data.Dataset.list_files(
+                    os.path.join(self.data_dir, "*.{}".format(image_type)))
+            else:
+                dataset=tf.data.Dataset.from_tensor_slices(self.file_list)
 
         # recalculate buffer size
         # if buffer_size<=0， adapted the buffer size

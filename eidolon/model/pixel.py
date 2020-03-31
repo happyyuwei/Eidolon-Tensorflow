@@ -8,12 +8,12 @@ def downsample(filters, size, apply_batchnorm=True):
     initializer = tf.random_normal_initializer(0., 0.02)
 
     result = tf.keras.Sequential()
-    result.add(
-        tf.keras.layers.Conv2D(filters, size, strides=2, padding='same',
-                               kernel_initializer=initializer, use_bias=False))
+    result.add(tf.keras.layers.Conv2D(filters, size, strides=2, padding='same',
+                                      kernel_initializer=initializer, use_bias=False))
 
     if apply_batchnorm:
         result.add(tf.keras.layers.BatchNormalization())
+
 
     result.add(tf.keras.layers.LeakyReLU())
 
@@ -47,7 +47,6 @@ def UNet(input_shape, high_performance_enable=False):
     param: high_performance_enable: 启用高性能。
     """
 
-
     inputs = tf.keras.layers.Input(shape=input_shape)
 
     down_stack = [
@@ -71,9 +70,10 @@ def UNet(input_shape, high_performance_enable=False):
         upsample(64, 4),  # (bs, 128, 128, 128)
     ]
 
-    if high_performance_enable==True:
-        down_stack.append(downsample(512, 4)) # (bs, 1, 1, 512)
-        up_stack.insert(0, upsample(512, 4, apply_dropout=True)) # (bs, 2, 2, 1024)
+    if high_performance_enable == True:
+        down_stack.append(downsample(512, 4))  # (bs, 1, 1, 512)
+        # (bs, 2, 2, 1024)
+        up_stack.insert(0, upsample(512, 4, apply_dropout=True))
 
     initializer = tf.random_normal_initializer(0., 0.02)
     last = tf.keras.layers.Conv2DTranspose(OUTPUT_CHANNELS, 4,
@@ -132,7 +132,7 @@ def Discriminator(input_shape):
 
 
 # def generator_loss(disc_generated_output, gen_output, target):
-    
+
 #     gan_loss = binary_cross_entropy(tf.ones_like(
 #         disc_generated_output), disc_generated_output)
 
@@ -161,6 +161,6 @@ def Discriminator(input_shape):
 
 
 # g = Generator(high_performance_enable=True)
-# d=Discriminator()
-# tf.keras.utils.plot_model(g, show_shapes=True, dpi=64)
-
+if __name__=="__main__":
+  d=Discriminator([128,128,3])
+  tf.keras.utils.plot_model(d, show_shapes=True, dpi=64)

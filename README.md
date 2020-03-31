@@ -1,5 +1,27 @@
-# Eidolon-Tensorflow
+# Eidolon-Tensorflow（Not Ready）
  A framework to manage your training tensorflow apps.
+
+
+# APIs
+## `loader.read_image`
+### 签名
+    read_image(
+        image_file, 
+        image_type
+    )
+
+### 例子
+    # 该例子用于读取一张名为color.jpg的图片。
+    # 图片类型是jpg。
+    read_image("color.jpg","jpg")
+
+### 参数
+* `image_file`: 字符串，待读取的图片名。
+* `image_type`: 字符串，图片类型。目前支持：png, jpg, bmp.
+
+### 返回值
+* 图像3-D张量 `[img_height, img_width, channel]`               
+
 
 # Inner Function
 ## lifecycle
