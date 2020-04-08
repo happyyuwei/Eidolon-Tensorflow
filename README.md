@@ -1,5 +1,13 @@
-# Eidolon-Tensorflow（Not Ready）
- A framework to manage your training tensorflow apps.
+# Eidolon-Tensorflow（New version coming Soon）
+ A framework to manage the training lifecycle of tensorflow apps.
+
+# What's Eidolon?
+
+![avatar](./instructions/top.png)
+
+
+
+
 
 
 # APIs
