@@ -238,7 +238,7 @@ tensorboard --logdir=your_app_path/log/tensorboard
     ```python
     model_map = {"model": model}
     ```
-    使用如下函数注册对应关系，optimizer_name 需要自己命名。若存在多个优化函数（如生成对抗网络），则调用多测。
+    使用如下函数注册对应关系，`optimizer_name` 需要自己命名。若存在多个优化函数（如生成对抗网络），则调用多次。
     ```python
     self.register_model_and_optimizer(
             optimizer, model_map, optimizer_name)
@@ -253,7 +253,7 @@ tensorboard --logdir=your_app_path/log/tensorboard
 
 **定义损失函数阶段注意事项如下：**
 * **返回值：**
-    该函数需要返回两个 `key-value` 字典。第一个字典为需要优化的损失函数表。`key` 为优化器名称，需要与用 `register_model_and_optimizer` 注册优化器时所用的名字一致，`value` 为损失函数。第二个字典为需要保存与展示的损失函数表。`key` 为需要保存的损失值名称，其名称需要与`register_display_metrics()` 注册的名称一致， `value` 为损失函数。有时一个损失函数的多项均想要保存，则均需要在第二项指定。
+    该函数需要返回两个 `key-value` 字典。第一个字典为需要优化的损失函数表。`key` 为优化器名称，需要与用 `register_model_and_optimizer()` 注册优化器时所用的名字一致，`value` 为损失函数。第二个字典为需要保存与展示的损失函数表。`key` 为需要保存的损失值名称，其名称需要与`register_display_metrics()` 注册的名称一致， `value` 为损失函数。有时一个损失函数的多项均想要保存，则均需要在第二项指定。
 
 **定义评价指标注意事项如下：**
 * **返回值：**
@@ -263,7 +263,7 @@ tensorboard --logdir=your_app_path/log/tensorboard
 ## 教程二：构建手写体生成对抗网络训练
 本教程将介绍使用该框架训练手写体生成对抗网络。并自动进行生命周期管理，损失函数保存，模型检查点保存，生成图像可视化等内容。
 
-# 步骤1：创建工程、创建模型、与创建训练容器。
+### 步骤1：创建工程、创建模型、与创建训练容器。
 该过程与教程1一致，可直接参考手写体识别教程。
 该生成网络与判决网络使用代码如下：
 ```python
