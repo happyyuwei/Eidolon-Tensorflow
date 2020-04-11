@@ -19,7 +19,7 @@
 
 # 入门教程
 ## 教程一：构建手写体识别训练
-本教程将介绍使用该框架训练手写体识别。并自动进行生命周期管理，损失函数保存，模型检查点保存等内容。
+本教程将介绍使用该框架训练手写体识别。并自动进行生命周期管理，损失函数保存，模型检查点保存等内容。并且在最后介绍接入`tensorboard`。
 ### **步骤1：创建工程**
 按照快速开始中的方法构建工程，本教程取名为mnist。
 ### **步骤2：创建模型**
@@ -180,14 +180,34 @@ def compute_test_metrics_function(self, each_batch, extra_batch_data):
     },
 ```
 运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至`./app/mnist/training_checkpoints/`目录下，并且将 `.h5`模型文件保存在 `model` 目录下。所有日志与训练解损失保存在 `log` 目录下。
-经过几轮训练，损失函数大大下降。可以运行`./paint_loss.bat`查看可视化损失曲线,或者读取 `./app/mnist/log/train_log.txt` 查看数值。前三轮损失函数如下：
+经过几轮训练，损失函数大大下降。可以运行`./paint_loss.bat`使用内置引擎（还在构建，功能有限）查看可视化损失曲线，如下图。
+
+<div style="text-align:center">
+<img src="./instructions/loss_mnist.png" width="500" alt="图片名称">
+</div>
+
+或者读取 `./app/mnist/log/train_log.txt` 查看数值。前三轮损失函数如下：
 ```python
 epoch=1,timestamp=Apr-11-2020-14:44:46,train loss=1.1976970434188843,accuracy=0.9850830078124998
 epoch=2,timestamp=Apr-11-2020-14:44:48,train loss=0.5482775568962097,accuracy=0.9898486328124999
 epoch=3,timestamp=Apr-11-2020-14:44:49,train loss=0.4318382441997528,accuracy=0.9912109375
 ```
-完成该教学。
-
+### **步骤5：接入Tensorboard**
+上述均使用`eidolon`内置的日志与可视化引擎来展示训练数据，可视化层尚在构建中，若想要实现更多功能，或者你可能习惯于使用`Tensorboard`，同样很简单。无需任何一行代码，只需要在配置文件中启用`Tensorboard`即可。配置文件启用该功能的位置如下：
+```json
+"tensorboard_enable": {
+      "value": true,
+      "desc": "启用tensorboard记录日志。可以使用tensorboard在页面查看训练情况。"
+    },
+```
+其`Tensorboard`日志记录位置为`./app/log/tensorboard`。若启用该功能，则会在日志目录中看到这个子目录。随后，使用官方一致的方法打开`Tensorboard`，命令行输入如下命令即可：
+```python
+tensorboard --logdir='your_app_path/log/tensorboard'
+```
+即可看到上述一致的效果。
+<div style="text-align:center">
+<img src="./instructions/tensorboard_mnist.png" alt="图片名称">
+</div>
 
 
 
