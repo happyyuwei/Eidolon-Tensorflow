@@ -18,12 +18,14 @@
 
 
 # 入门教程
+接下来将介绍一些易于上手本框架的教程，包括手写体识别与手写体生成。
+默认读者已经对如何使用 `tensorflow` 构建深度学习训练流程有了一定的了解。
 ## 教程一：构建手写体识别训练
 本教程将介绍使用该框架训练手写体识别。并自动进行生命周期管理，损失函数保存，模型检查点保存等内容。并且在最后介绍接入`tensorboard`。
 ### **步骤1：创建工程**
 按照快速开始中的方法构建工程，本教程取名为mnist。
 ### **步骤2：创建模型**
-创建 `mnist.py`，可放置于任意位置，并在其中构建模型，本教程推荐将该文件放置于`./eidolon/model/`下。使用 `Tensorflow.Keras API` 创建模型，本教程只是用最简单的模型，代码如下：
+创建 `mnist.py`，可放置于任意位置，并在其中构建模型，本教程将该文件放置于`./eidolon/model/`下。使用 `Tensorflow.Keras API` 创建模型，本教程只是用最简单的模型，代码如下：
 
 ```python
 def make_DNN_model():
@@ -56,7 +58,7 @@ def make_DNN_model():
 import tensorflow as tf
 from eidolon import train
 ```
-其次创建类，并继承`train.Container`，代码结构如下。
+其次创建类，并继承`eidolon.train.Container`，所有容器均需继承自该类或该类的子类。代码结构如下。
 ```python
 class MnistGANContainer(train.Container):
     def on_prepare(self):
@@ -182,7 +184,7 @@ def compute_test_metrics_function(self, each_batch, extra_batch_data):
 运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至`./app/mnist/training_checkpoints/`目录下，并且将 `.h5`模型文件保存在 `model` 目录下。所有日志与训练解损失保存在 `log` 目录下。
 经过几轮训练，损失函数大大下降。可以运行`./paint_loss.bat`使用内置引擎（还在构建，功能有限）查看可视化损失曲线，如下图。
 
-<div style="text-align:center">
+<div>
 <img src="./instructions/loss_mnist.png" width="500" alt="图片名称">
 </div>
 
@@ -201,7 +203,7 @@ epoch=3,timestamp=Apr-11-2020-14:44:49,train loss=0.4318382441997528,accuracy=0.
     },
 ```
 其`Tensorboard`日志记录位置为`./app/log/tensorboard`。若启用该功能，则会在日志目录中看到这个子目录。随后，使用官方一致的方法打开`Tensorboard`，命令行输入如下命令即可：
-```python
+```java
 tensorboard --logdir='your_app_path/log/tensorboard'
 ```
 即可看到上述一致的效果。
@@ -209,8 +211,143 @@ tensorboard --logdir='your_app_path/log/tensorboard'
 <img src="./instructions/tensorboard_mnist.png" alt="图片名称">
 </div>
 
+## 教程二：构建手写体生成对抗网络训练
+本教程将介绍使用该框架训练手写体生成对抗网络。并自动进行生命周期管理，损失函数保存，模型检查点保存，生成图像可视化等内容。
 
+# 步骤1：创建工程、创建模型、与创建训练容器。
+该过程与教程1一致，可直接参考手写体识别教程。
+该生成网络与判决网络使用代码如下：
+```python
+def make_generator_model():
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Dense(7*7*256, use_bias=False, input_shape=(100,)))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.LeakyReLU())
 
+    model.add(tf.keras.layers.Reshape((7, 7, 256)))
+    # assert model.output_shape == (None, 7, 7, 256) # 注意：batch size 没有限制
+
+    model.add(tf.keras.layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False))
+    # assert model.output_shape == (None, 7, 7, 128)
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.LeakyReLU())
+
+    model.add(tf.keras.layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    # assert model.output_shape == (None, 14, 14, 64)
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.LeakyReLU())
+
+    model.add(tf.keras.layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+
+    return model
+
+def make_discriminator_model():
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
+                                     input_shape=[28, 28, 1]))
+    model.add(tf.keras.layers.LeakyReLU())
+    model.add(tf.keras.layers.Dropout(0.3))
+
+    model.add(tf.keras.layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+    model.add(tf.keras.layers.LeakyReLU())
+    model.add(tf.keras.layers.Dropout(0.3))
+
+    model.add(tf.keras.layers.Flatten())
+    model.add(tf.keras.layers.Dense(1))
+
+    return model
+```
+### **步骤2：创建训练容器（核心）**
+执行准备阶段的内容，包括加载数据集，创建模型，与指定优化器。
+容器类起名为 `MnistGANContainer`，同样继承`eidolon.train.Container`
+其代码如下：
+```python
+def on_prepare(self):
+
+        # 载入数据集
+        (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
+        train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype('float32')
+        train_images = (train_images - 127.5) / 127.5  # 将图片标准化到 [-1, 1] 区间内
+        train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(BUFFER_SIZE).batch(BATCH_SIZE)
+        # 注册数据集
+        self.register_dataset(train_dataset)
+
+        # 创建模型
+        self.generator = mnist_gan.make_generator_model()
+        self.discriminator = mnist_gan.make_discriminator_model()
+
+        # 创建优化器
+        generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+        discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+        # 注册模型与优化器
+        self.register_model_and_optimizer(generator_optimizer, {"generator": self.generator},"generator_opt")
+        self.register_model_and_optimizer(discriminator_optimizer, {"discriminator": self.discriminator}, "discriminator_opt")
+
+        self.register_display_metrics(["generator loss","discriminator loss"])
+        # 调用父类
+        super(MnistGANContainer, self).on_prepare()
+```
+
+定义损失函数如下
+```python
+def compute_loss_function(self, each_batch, extra_batch_data):
+
+        # 随机生成输入
+        noise = tf.random.normal([BATCH_SIZE, NOISE_DIM])
+        # 生成输出
+        generated_images = self.generator(noise, training=True)
+
+        # 输入真实图像后的输出
+        real_output = self.discriminator(each_batch, training=True)
+        # 当输入错误图像后的输出
+        fake_output = self.discriminator(generated_images, training=True)
+
+        # 计算判别损失
+        gen_loss, disc_loss = loss_util.gan_loss(real_output, fake_output)
+
+        # 返回结构集
+        return {"generator_opt": gen_loss, "discriminator_opt": disc_loss}, {"generator loss": gen_loss, "discriminator loss": disc_loss}
+```
+
+定义可视化函数，该过程需要注意，教程1中没有出现。所有的可视化图像会保存在`./log/result_image`中。
+```python
+def on_test_visual(self):
+        noise = tf.random.normal([4, NOISE_DIM])
+
+        predictions = self.generator(noise, training=False)
+
+        # 排成列表
+        image_list = [predictions[0:1], predictions[1:2],
+                      predictions[2:3], predictions[3:4]]
+        title_list = ["1", "2", "3", "4"]
+        return image_list, title_list
+```
+### **步骤3：运行**
+进入刚才创建好的目录，比如 `./app/mnist_gan`。
+打开配置文件 `config.json`。如果容器文件 `example_container.py` 保存`./eidolon`目录中，则修改启动容器为 `eidolon.example_container.MnistGANContainer`。
+该部分的`JSON`文件如下，同样你也可以修改训练轮数，保存周期等其他参数。
+```json
+"container": {
+      "value": "eidolon.example_container.MnistGANContainer",
+      "desc": "定义训练使用的容器。容器用于管理整个训练的生命周期。"
+    },
+    "epoch": {
+      "value": 2000,
+      "desc": "训练轮数。默认为2000轮。"
+    },
+    "save_period": {
+      "value": 1,
+      "desc": "保存周期。每过一个保存周期，将会保存训练的检查点以及记录训练日志。"
+    },
+```
+运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至 `./app/mnist/training_checkpoints/` 目录下，将 `.h5` 模型文件保存在 `model` 目录下，损失曲线保存在 `./app/mnist_gan/log/train_log.txt` 中，并将每一轮生成的图像保存至 `./app/mnist_gan/log/result_image` 中，如图，命名格式为 `{训练轮数}_{当前轮的某一张}`。
+
+<img src="./instructions/mnist_gan_file.png" height=150>
+
+同样可以启用`Tensorboard`查看每一轮训练效果。
+
+<img src="./instructions/mnist_gan_tensorboard.png" height=500>
 
 
 

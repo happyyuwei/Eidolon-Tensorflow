@@ -53,6 +53,8 @@ class MnistGANContainer(train.Container):
         self.register_model_and_optimizer(discriminator_optimizer, {
                                           "discriminator": self.discriminator}, "discriminator_opt")
 
+        
+        self.register_display_metrics(["generator loss","discriminator loss"])
         # 调用父类
         super(MnistGANContainer, self).on_prepare()
 
@@ -72,7 +74,7 @@ class MnistGANContainer(train.Container):
         gen_loss, disc_loss = loss_util.gan_loss(real_output, fake_output)
 
         # 返回结构集
-        return {"generator_opt": gen_loss, "discriminator_opt": disc_loss}, {"generator_loss": gen_loss, "discriminator_loss": disc_loss}
+        return {"generator_opt": gen_loss, "discriminator_opt": disc_loss}, {"generator loss": gen_loss, "discriminator loss": disc_loss}
 
     def on_test_visual(self):
         noise = tf.random.normal([4, NOISE_DIM])
