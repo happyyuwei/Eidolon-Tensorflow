@@ -1,7 +1,18 @@
 # Eidolon-Tensorflow（New version coming Soon）
- A framework to manage the training lifecycle of tensorflow apps.
+ A framework to manage the training lifecycle of your tensorflow apps.
 
-# What's Eidolon?
+# Eidolon 是什么?
+`Eidolon` 是用于你在使用 `Tensorflow` 训练模型时，管理生命周期的框架。
+`Tensorflow` 以及高层的 `Keras` 接口已经大大改善构建模型结构与优化损失函数的过程。但在训练整个模型时，整个生命周期还需要自己管理，包括：
+* 准备阶段
+    > 加载数据集，创建与管理模型实例，设置每一个模型对应的优化器等。
+* 训练阶段
+    > 循环传入批数据，计算梯度与更新参数，保存每一轮的检查点等。
+* 测试阶段
+    > 保存每一轮的损失值，保存测试结果，可视化数据等。
+    
+此外，在每次创建一个训练任务时，均需要重新构建上述过程。然而上述过程与设计模型本真无关。
+`Eidolon`允许你在编写少量代码甚至是无代码的情况下，自动完成上述任务，你可以更专注于设计模型本身。
 
 ![avatar](./instructions/top.png)
 
