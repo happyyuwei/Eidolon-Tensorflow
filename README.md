@@ -1,4 +1,4 @@
-*<font color=gray>
+*<font color=lightgray>
 我不懂深度学习，但我懂如何构建软件，我看得到其中的痛点。写深度学习也有两年了，也有很多繁琐的地方，将其中通用的代码组成了本框架——eidolon。
 eidolon本意守护精灵的意思，我也希望一致守护这你。
 </font>*
