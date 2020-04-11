@@ -22,6 +22,7 @@ def gan_loss(disc_real_output, disc_generated_output):
     disc_loss描述：判别器是否能判断出生成网络的真假
     :param: disc_real_output 判决网络在输入真实图像下的输出
     :param: disc_generated_output 判决网络在输入虚假图像下的输出
+    :return gen_loss, disc_loss
     """
 
     # 计算生成损失

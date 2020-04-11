@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Environment\\Miniconda3\\envs\\tensorflow2.0-cpu\\python.exe",
+    "python.pythonPath": "C:\\Program environments\\Python_3\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.flake8Enabled": false

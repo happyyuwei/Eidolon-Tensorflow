@@ -1,10 +1,10 @@
-#third part lib
+# third part lib
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-#system lib
+# system lib
 import os
 import time
 import math
@@ -51,6 +51,16 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
     drawable[drawable < 0] = 0
     drawable[drawable > 1] = 1
 
+
+    shape=np.shape(drawable)
+
+    #只有长宽的单通道灰度图
+    #@since 2020.4.10 支持单通道图像绘制
+    #@author yuwei
+    if len(shape)==2:
+        [height, width] = np.shape(drawable)
+        drawable=np.reshape(drawable,[height,width,1])
+
     [height, width, channel] = np.shape(drawable)
     # change binary image
     if image_type == IMAGE_BINARY and channel >= 3:
@@ -79,10 +89,10 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
 
     # save
     # plt.imsave(file, drawable)
-    #跟换PIL库保存图片
-    drawable=drawable*255
+    # 跟换PIL库保存图片
+    drawable = drawable*255
     img = Image.fromarray(drawable.astype('uint8'))
-    img.save(file,"png")
+    img.save(file, "png")
 
 
 def save_images(image_list, title_list, image_dir, seq=""):
@@ -209,12 +219,12 @@ class LogTool:
 
         # beta @since 2019.12.24 支持tensorboard
         # 目前默认将tensorboard日志记录在日志目录的tensorboard文件夹中
-        self.tensorboard_enable=tensorboard_enable
+        self.tensorboard_enable = tensorboard_enable
         print("Tensorboard enable: {}".format(tensorboard_enable))
-        #  当第一次调用保存tensorboard的时候才创建tensorboard writer
-        #避免在创建运行环境（如调用GPU）前调用tensorflow的任何内容
+        # 当第一次调用保存tensorboard的时候才创建tensorboard writer
+        # 避免在创建运行环境（如调用GPU）前调用tensorflow的任何内容
         # 记录tensorboard是否加载
-        self.tensorboard_init_state=False
+        self.tensorboard_init_state = False
 
     def save_image_list_tensorboard(self, image_list, title_list):
         """
@@ -236,11 +246,11 @@ class LogTool:
         使用tensorboard保存损失函数，调用tf.summary.scalar()
         可以使用tensorboard在网页端查看变化曲线
         """
-        if self.tensorboard_init_state==False:
-            #创建tensorboard记录实例
+        if self.tensorboard_init_state == False:
+            # 创建tensorboard记录实例
             self.tensorboard = tf.summary.create_file_writer(
                 os.path.join(self.log_dir, "tensorboard"))
-            self.tensorboard_init_state=True
+            self.tensorboard_init_state = True
 
         # 测试支持tensorboard
         with self.tensorboard.as_default():
@@ -259,9 +269,8 @@ class LogTool:
         :return:
         """
         save_images(image_list, title_list, self.image_dir, self.current_epoch)
-        if self.tensorboard_enable==True:
-            self.save_image_list_tensorboard(image_list,title_list)
-        
+        if self.tensorboard_enable == True:
+            self.save_image_list_tensorboard(image_list, title_list)
 
     def save_loss(self, loss_set):
         """
@@ -284,10 +293,9 @@ class LogTool:
                                                       time.strftime("%b-%d-%Y-%H:%M:%S", time.localtime()), content)
             # change line
             f.writelines(line)
-        
-        if self.tensorboard_enable==True:
-            self.save_loss_tensorboard(loss_set)
 
+        if self.tensorboard_enable == True:
+            self.save_loss_tensorboard(loss_set)
 
     def plot_model(self, model, model_name):
         """
@@ -376,7 +384,7 @@ def paint_loss(log_dir, update_time=30, save=False):
     # paint
     plt.figure("Loss")
     # 如设置为不保存，则直接实时动态显示损失曲线
-    if save==False:
+    if save == False:
         plt.ion()
         while True:
             num = 1
@@ -394,7 +402,7 @@ def paint_loss(log_dir, update_time=30, save=False):
         plt.ioff()
         plt.show()
     else:
-        #若设置保存，则不会显示，而是直接保存成图片。
+        # 若设置保存，则不会显示，而是直接保存成图片。
         while True:
             num = 1
             for key in loss_map:
@@ -406,7 +414,7 @@ def paint_loss(log_dir, update_time=30, save=False):
                 num = num + 1
                 # update map every 30s
                 loss_map = parse_log(log_dir)
-            #默认保存在应用目录的loss.png下，会自动覆盖。
+            # 默认保存在应用目录的loss.png下，会自动覆盖。
             plt.savefig("loss.png")
             print("update...")
             time.sleep(update_time)

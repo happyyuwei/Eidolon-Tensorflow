@@ -68,39 +68,54 @@ config_loader.image_width = 256
 #     print(x)
 
 
-model=tf.keras.models.load_model("./app/car/model/generator.h5")
+# model=tf.keras.models.load_model("./app/car/model/generator.h5")
 
-list=[]
-for x in range(1,29):
-    list.append("{}.png".format(x))
-
-
-l=loader.ImageLoader("./data/car/test",is_training=False, file_list=list)
-d=l.load(image_type="png")
+# list=[]
+# for x in range(1,29):
+#     list.append("{}.png".format(x))
 
 
-i=1
-for x,_ in d:
-
-    y=model(x)
-
-    x=np.array(x[0])*0.5+0.5
-    x[x<0]=0
-    x[x>1]=1
+# l=loader.ImageLoader("./data/car/test",is_training=False, file_list=list)
+# d=l.load(image_type="png")
 
 
-    y=np.array(y[0])*0.5+0.5
-    y[y<0]=0
-    y[y>1]=1
-    # print(y)
-    plt.imsave("./temp1/{}.png".format(i), x)
-    plt.imsave("./temp2/{}.png".format(i), y)
-    # plt.imshow(y)
-    # plt.show()
-    print(i)
-    i=i+1
+# i=1
+# for x,_ in d:
+
+#     y=model(x)
+
+#     x=np.array(x[0])*0.5+0.5
+#     x[x<0]=0
+#     x[x>1]=1
 
 
+#     y=np.array(y[0])*0.5+0.5
+#     y[y<0]=0
+#     y[y>1]=1
+#     # print(y)
+#     plt.imsave("./temp1/{}.png".format(i), x)
+#     plt.imsave("./temp2/{}.png".format(i), y)
+#     # plt.imshow(y)
+#     # plt.show()
+#     print(i)
+#     i=i+1
+
+# (train_images, _), (_, _) = tf.keras.datasets.mnist.load_data()
+# train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype('float32')
+# train_images = (train_images - 127.5) / 127.5 # 将图片标准化到 [-1, 1] 区间内
+# train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(10).batch(256)
+
+# x=train_dataset.take(2)
+
+# for a in x:
+#     print(a.shape)
+
+a=tf.Variable([0.8,0.2])
+
+
+a[a>0.5]=1
+
+print(a)
 
 
 

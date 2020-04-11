@@ -144,7 +144,6 @@ class PixelContainer(train.Container):
         return self.generator.trainable_variables
 
         
-
     @tf.function
     def on_train_batch(self, each_pair, _):
         """
