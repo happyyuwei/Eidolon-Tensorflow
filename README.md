@@ -1,3 +1,8 @@
+*<font color=gray>
+我不懂深度学习，但我懂如何构建软件，我看得到其中的痛点。写深度学习也有两年了，也有很多繁琐的地方，将其中通用的代码组成了本框架——eidolon。
+eidolon本意守护精灵的意思，我也希望一致守护这你。
+</font>*
+
 # Eidolon-Tensorflow（New version coming Soon）
  A framework to manage the training lifecycle of your tensorflow apps.
 
@@ -483,7 +488,7 @@ def on_test_visual(self):
 在该工程目录中，运行 `train.bat` 文件。所有可视化结果位于 `./log/result_image/` 目录下，损失函数与评价指标位 `./log/train_log.txt` 文件中。
 经过多轮迭代，其损失函数与测试 `PSNR` 结果如下:
 
-<img src="./instructions/pixel2pixel_result.png">
+<img src="./instructions/pixel2pixel_result.png" height=150>
 
 多轮迭代的可视化结果如下所示：
 
