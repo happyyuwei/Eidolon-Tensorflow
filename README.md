@@ -10,7 +10,7 @@
     > 循环传入批数据，计算梯度与更新参数，保存每一轮的检查点等。
 * 测试阶段
     > 保存每一轮的损失值，保存测试结果，可视化数据等。
-    
+
 此外，在每次创建一个训练任务时，均需要重新构建上述过程。然而上述过程与设计模型本真无关。
 `Eidolon`允许你在编写少量代码甚至是无代码的情况下，自动完成上述任务，你可以更专注于设计模型本身。
 
@@ -88,7 +88,7 @@ class MnistGANContainer(train.Container):
 
         return {}
 ```
-执行准备阶段的内容，包括加载数据集，创建模型，与指定优化器。
+重写准备阶段的内容，包括加载数据集，创建模型，与指定优化器。
 其代码如下：
 ```python
 def on_prepare(self):
@@ -214,8 +214,8 @@ epoch=3,timestamp=Apr-11-2020-14:44:49,train loss=0.4318382441997528,accuracy=0.
     },
 ```
 其`Tensorboard`日志记录位置为`./app/log/tensorboard`。若启用该功能，则会在日志目录中看到这个子目录。随后，使用官方一致的方法打开`Tensorboard`，命令行输入如下命令即可：
-```java
-tensorboard --logdir='your_app_path/log/tensorboard'
+```
+tensorboard --logdir=your_app_path/log/tensorboard
 ```
 即可看到上述一致的效果。
 <div style="text-align:center">
@@ -269,7 +269,7 @@ def make_discriminator_model():
     return model
 ```
 ### **步骤2：创建训练容器（核心）**
-执行准备阶段的内容，包括加载数据集，创建模型，与指定优化器。
+重写准备阶段的内容，包括加载数据集，创建模型，与指定优化器。
 容器类起名为 `MnistGANContainer`，同样继承`eidolon.train.Container`
 其代码如下：
 ```python
