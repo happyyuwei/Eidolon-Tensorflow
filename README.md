@@ -69,7 +69,7 @@ def make_DNN_model():
 import tensorflow as tf
 from eidolon import train
 ```
-其次创建类，并继承`eidolon.train.Container`，所有容器均需继承自该类或该类的子类。代码结构如下。
+其次创建类，并继承`eidolon.train.Container`，所有容器均需继承自该类或该类的子类，我们需要做的是覆盖以下三个方法。代码结构如下。
 ```python
 class MnistGANContainer(train.Container):
     def on_prepare(self):
@@ -177,7 +177,7 @@ def compute_test_metrics_function(self, each_batch, extra_batch_data):
 进入刚才创建好的目录`./app/mnist`。
 打开配置文件 `config.json`
 修改启动容器为 `eidolon.example_container.MnistClassifierContainer`。
-该部分的`JSON`文件如下，同样你也可以修训练轮数，保存周期等其他参数。
+该部分的`JSON`文件如下，同样你也可以修改训练轮数，保存周期等其他参数。
 ```json
 "container": {
       "value": "eidolon.example_container.MnistClassifierContainer",
@@ -192,7 +192,7 @@ def compute_test_metrics_function(self, each_batch, extra_batch_data):
       "desc": "保存周期。每过一个保存周期，将会保存训练的检查点以及记录训练日志。"
     },
 ```
-运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至`./app/mnist/training_checkpoints/`目录下，并且将 `.h5`模型文件保存在 `model` 目录下。所有日志与训练解损失保存在 `log` 目录下。
+运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至`./app/mnist/training_checkpoints/`目录下，并且将 `.h5`模型文件保存在 `./app/mnist/model` 目录下。所有日志与训练解损失保存在 `log` 目录下。
 经过几轮训练，损失函数大大下降。可以运行`./paint_loss.bat`使用内置引擎（还在构建，功能有限）查看可视化损失曲线，如下图。
 
 <div>
@@ -221,6 +221,44 @@ tensorboard --logdir=your_app_path/log/tensorboard
 <div style="text-align:center">
 <img src="./instructions/tensorboard_mnist.png" alt="图片名称">
 </div>
+
+### **注意事项与强调**
+**准备阶段需要在重写该方法时需要注意一下几点：**
+* **注册数据集。**
+    在载入数据集之后，需要调用以下方法对数据集进行注册。该容器在训练时会自动喂入数据集进行训练。
+    ```python
+    self.register_dataset(train_dataset, test_dataset)
+    ```
+    训练集必须进行注册，若无需测试集则只传入训练集，如下：
+    ```python
+    self.register_dataset(train_dataset)
+    ```
+* **指定优化器与模型的关系。**
+    在创建模型与优化器之后，需要指定每个模型对应的优化器。其中模型需要使用key-value的键值对，其中key是模型的名称（自己命名），value为模型实例。如:
+    ```python
+    model_map = {"model": model}
+    ```
+    使用如下函数注册对应关系，optimizer_name 需要自己命名。若存在多个优化函数（如生成对抗网络），则调用多测。
+    ```python
+    self.register_model_and_optimizer(
+            optimizer, model_map, optimizer_name)
+    ```
+* **注册需要记录的损失函数名字。**
+    把需要保存的损失值名称使用如下函数进行注册，名称自行命名，该过程很重要。
+    ```python
+    self.register_display_metrics(["train loss"])
+    ```
+* **调用父类`on_prepare(self)`方法。**
+    父类方法包含自动载入与保存数据集，因此如果希望实现该功能，则需要调用该方法。警告：仅允许在结尾调用该方法，否则可能会报错。
+
+**定义损失函数阶段注意事项如下：**
+* **返回值：**
+    该函数需要返回两个 `key-value` 字典。第一个字典为需要优化的损失函数表。`key` 为优化器名称，需要与用 `register_model_and_optimizer` 注册优化器时所用的名字一致，`value` 为损失函数。第二个字典为需要保存与展示的损失函数表。`key` 为需要保存的损失值名称，其名称需要与`register_display_metrics()` 注册的名称一致， `value` 为损失函数。有时一个损失函数的多项均想要保存，则均需要在第二项指定。
+
+**定义评价指标注意事项如下：**
+* **返回值：**
+    该函数返回一个 `key-value` 字典。`key` 为展示的评价指标名称，`value` 为评价指标值。
+
 
 ## 教程二：构建手写体生成对抗网络训练
 本教程将介绍使用该框架训练手写体生成对抗网络。并自动进行生命周期管理，损失函数保存，模型检查点保存，生成图像可视化等内容。
@@ -300,6 +338,7 @@ def on_prepare(self):
         super(MnistGANContainer, self).on_prepare()
 ```
 
+
 定义损失函数如下
 ```python
 def compute_loss_function(self, each_batch, extra_batch_data):
@@ -321,7 +360,7 @@ def compute_loss_function(self, each_batch, extra_batch_data):
         return {"generator_opt": gen_loss, "discriminator_opt": disc_loss}, {"generator loss": gen_loss, "discriminator loss": disc_loss}
 ```
 
-定义可视化函数，该过程需要注意，教程1中没有出现。所有的可视化图像会保存在`./log/result_image`中。
+定义可视化函数，该过程需要注意，教程1中没有出现。所有的可视化图像会保存在`./log/result_image`中。该函数返回两个列表，第一个列表为图像列表，每个图像为4维张量，第二个列表为图像标题名称。
 ```python
 def on_test_visual(self):
         noise = tf.random.normal([4, NOISE_DIM])
@@ -352,7 +391,7 @@ def on_test_visual(self):
       "desc": "保存周期。每过一个保存周期，将会保存训练的检查点以及记录训练日志。"
     },
 ```
-运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至 `./app/mnist/training_checkpoints/` 目录下，将 `.h5` 模型文件保存在 `model` 目录下，损失曲线保存在 `./app/mnist_gan/log/train_log.txt` 中，并将每一轮生成的图像保存至 `./app/mnist_gan/log/result_image` 中，如图，命名格式为 `{训练轮数}_{当前轮的某一张}`。
+运行`train.bat`开始训练。该过程为自动将每一个训练周期的模型检查点保存至 `./app/mnist/training_checkpoints/` 目录下，将 `.h5` 模型文件保存在 `./app/mnist/model` 目录下，损失曲线保存在 `./app/mnist_gan/log/train_log.txt` 中，并将每一轮生成的图像保存至 `./app/mnist_gan/log/result_image` 中，如图，命名格式为 `{训练轮数}_{当前轮的某一张}`。
 
 <img src="./instructions/mnist_gan_file.png" height=150>
 
