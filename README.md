@@ -400,6 +400,103 @@ def on_test_visual(self):
 <img src="./instructions/mnist_gan_tensorboard.png" height=500>
 
 
+## 教程三：无代码训练图像生成网络
+本教程将使用 `eidolon` 训练图像生成网络，而无需编写代码。其效果如下图所示，左边为输入铅笔素描，右边为输出彩色图像。该数据集需要自行去网站下载：https://www.gwern.net/Danbooru2019 。
+
+<img src="./instructions/pixel2pixel_example.png" height=150>
+
+### **步骤1：创建项目**
+进入项目根目录并运行:  `python create.py -n animate-face`，其中`animate-face`为你所希望创建的工程名称，还可以取别的名字。创建完成后进入工程目录 `./app/animate-face`
+
+### **步骤2：自定义配置（核心）**
+打开配置文件 `config.json`，所有配置均在该文件中定义。
+1. 修改训练图像属性，包括图像大小与图像格式，下例展示输入128*128，图像格式为png的配置。
+```json
+"image_size": {
+    "value": [
+    128,
+    128,
+    3
+    ],
+    "desc": "输入图像的尺寸，依次为：宽、高、通道。数据集中所有图像会裁剪成该尺寸。（注意：多余通道会被直接忽略）。"
+},
+"image_type": {
+    "value": "png",
+    "desc": "图像格式，可选：jpg, png, bmp。"
+},
+```
+
+2. 数据增强
+下例展示了每次输入数据以0.5的概率随机翻转，并且随机裁剪尺寸为30px的内容。
+```json
+"data_flip": {
+    "value": 0.5,
+    "desc": "图像反转概率，在输入图像的时候存在一定的概率翻转图像已达到数据增强的效果。可输入（0-1）的小数。默认为0（不翻转）。"
+},
+"crop_size": {
+    "value": [
+    30,
+    30
+    ],
+    "desc": "图像裁剪，在输入图像的时候随机裁剪一定的尺寸已达到数据增强。默认情况下关闭。"
+}
+```
+3. 设置运行容器与数据集位置
+设置容器为 `eidolon.pixel_container.PixelContainer`,该容器为 `eidolon` 内部自带容器。
+下例展示了设置数据集路径为 `../../data/animate-face`。
+训练轮数与保存周期与其他设置可按照实际需求自定义设置。
+```json
+"container": {
+    "value": "eidolon.pixel_container.PixelContainer",
+    "desc": "定义训练使用的容器。容器用于管理整个训练的生命周期。"
+},
+"epoch": {
+    "value": 2000,
+    "desc": "训练轮数。默认为2000轮。"
+},
+"save_period": {
+    "value": 1,
+    "desc": "保存周期。每过一个保存周期，将会保存训练的检查点以及记录训练日志。"
+},
+"data_dir": {
+    "value": "../../data/animate-face",
+    "desc": "训练数据集所在路径，相对位置为当前应用app所在位置。"
+},
+```
+4. 设置生成网络与判决网络
+下例给出设置生成网络为 `U-Net` 网络，判决网络为 `CGAN`。
+```json
+"generator": {
+    "value": "unet",
+    "desc": "训练使用的生成器结构，默认使用Unet。包含选择：unet, resnet16。"
+},
+"discriminator": {
+    "value": "cgan",
+    "desc": "训练使用的生成器结构，默认不使用判决器。包含选择：no, gan, cgan。"
+},
+"high_performance": {
+    "value": false,
+    "desc": "如果在低配GPU中(<4G)，可能发生网络结构过于复杂而显存不足的情况。禁用该选项时，会把UNet中的编码器最后一层与解码器第一层去除。"
+},
+```
+### **步骤3：运行**
+在该工程目录中，运行 `train.bat` 文件。所有可视化结果位于 `./log/result_image/` 目录下，损失函数与评价指标位 `./log/train_log.txt` 文件中。
+经过多轮迭代，其损失函数与测试 `PSNR` 结果如下:
+
+<img src="./instructions/pixel2pixel_result.png">
+
+多轮迭代的可视化结果如下所示：
+
+<img src="./instructions/pixel2pixel_visual.png">
+
+同样的，更换数据集，可以达到不同任务的效果。
+<img src="./instructions/pixel2pixel_car.png">
+    
+
+
+
+
+
 
 
 
