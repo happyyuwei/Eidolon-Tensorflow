@@ -30,7 +30,7 @@ class Container:
 
         # 初始化日志工具
         self.log_tool = train_tool.LogTool(
-            log_dir=config_loader.log_dir, save_period=config_loader.save_period, tensorboard_enable=config_loader.tensorboard_enable)
+            log_dir=config_loader.log_dir, save_period=config_loader.save_period, max_save=config_loader.max_image_save, tensorboard_enable=config_loader.tensorboard_enable)
         print("Initial train log....")
 
         # 初始化检查点路径
@@ -51,7 +51,10 @@ class Container:
 
 
         # 损失记录器列表
-        self.loss_recorder_map={}
+        # 同时记录训练与测试集损失
+        self.train_loss_recorder_map={}
+        self.test_loss_recorder_map={}
+
 
     def register_dataset(self, train_dataset, test_dataset=None):
         """
@@ -59,6 +62,39 @@ class Container:
         """
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
+
+
+    def prepare_image_dataset(self, load_function=None, load_label_function=None, train_shuffle=True, test_shuffle=True):
+        """
+        载入包含图像的数据集
+        :param: load_function 载入方式
+        :load_label_function 标签载入方式， 如果需要单独载入标签，则指定该函数
+        :train_shuffle: 训练集置乱
+        :test_shuffle: 测试集置乱
+        @since 2020.4.16
+        @author yuwei
+        将之前载入数据集的内容抽象出来。
+        """
+        # 训练数据
+        train_loader = loader.ImageLoader(os.path.join(
+            self.config_loader.data_dir, "train"), is_training=True, shuffle=train_shuffle)
+        train_dataset = train_loader.load(
+            self.config_loader, load_function=load_function, load_label_function=load_label_function)
+        # 测试数据
+        test_loader = loader.ImageLoader(os.path.join(
+            self.config_loader.data_dir, "test"), is_training=False, shuffle=test_shuffle)
+        test_dataset = test_loader.load(
+            self.config_loader, load_function=load_function, load_label_function=load_label_function)
+        print("Load dataset, {}....".format(self.config_loader.data_dir))
+
+        print("train dataset type: {}".format(train_dataset))
+        print("test dataset type: {}".format(test_dataset))
+
+        # 注册数据集
+        self.register_dataset(train_dataset, test_dataset)
+
+
+
 
     def register_model_and_optimizer(self, optimizer,  model_map, optimizer_name):
         """
@@ -79,10 +115,18 @@ class Container:
         # 添加名称
         self.optimizer_name_list.append(optimizer_name)
     
-    def register_display_metrics(self, name_list):
+
+    def register_display_loss(self, name_list):
+        """
+        不建议加 train 或者test字样
+        每一轮训练，都会同时测试训练集测试和测试集损失
+        """
         for each in name_list:
-            #创建损失函数记录器
-            self.loss_recorder_map[each]=tf.keras.metrics.Mean(name=each)
+            # 创建损失函数记录器
+            # 训练集损失
+            self.train_loss_recorder_map[each]=tf.keras.metrics.Mean(name=each)
+            # 测试集损失
+            self.test_loss_recorder_map[each]=tf.keras.metrics.Mean(name=each)
 
     def on_prepare(self):
         """
@@ -144,6 +188,20 @@ class Container:
         """
         return {}, {}
 
+    def update_train_display_loss(self, display_map):
+        """
+        更新训练损失记录器
+        """
+        for each in display_map:
+            self.train_loss_recorder_map[each](display_map[each])
+
+    def update_test_display_loss(self, display_map):
+        """
+        更新测试损失记录器
+        """
+        for each in display_map:
+            self.test_loss_recorder_map[each](display_map[each])
+    
     # @tf.function
     def gradient_tape_container(self, each_batch, extra_batch_data, optimizer_num, tape_map):
         """
@@ -184,8 +242,8 @@ class Container:
                     self.optimize_map[optimizer_name].apply_gradients(
                         zip(gradients, trainable_variables))
 
-                    for each in display_map:
-                        self.loss_recorder_map[each](display_map[each])
+                    #更新损失记录集
+                    self.update_train_display_loss(display_map)
 
 
 
@@ -222,8 +280,8 @@ class Container:
             # 优化网络参数
             optimizer.apply_gradients(zip(gradients, trainable_variables))
 
-            for each in display_map:
-                self.loss_recorder_map[each](display_map[each])
+            #更新损失记录集
+            self.update_train_display_loss(display_map)
 
 
 
@@ -273,12 +331,8 @@ class Container:
 
             optimizer2.apply_gradients(zip(gradients2, trainable_variables2))
 
-            for each in display_map:
-                self.loss_recorder_map[each](display_map[each])
-
-
-
-
+            #更新损失记录集
+            self.update_train_display_loss(display_map)
 
     def on_train_batch(self, each_batch, extra_batch_data):
         """
@@ -328,13 +382,10 @@ class Container:
         """
         重写训练父类方法
         """
-        #重置损失函数记录器
-        for reocrder in self.loss_recorder_map.values():
-            reocrder.reset_states()
         #开始训练
-        for image_num, each_batch in self.train_dataset.enumerate():
+        for num, each_batch in self.train_dataset.enumerate():
             # @since 2019.11.28 将该打印流变成原地刷新
-            print("\r"+"input_batch {}...".format(image_num), end="", flush=True)
+            print("\r"+"input_batch {}...".format(num), end="", flush=True)
             # 准备一个batch
             extra_batch_data = self.before_train_batch()
             # 训练一个batch
@@ -375,6 +426,32 @@ class Container:
             print("save {} model in HDFS file.".format(name))
 
         print("----------------------------------------------------------------------------------\n")
+    
+    @tf.function
+    def on_test_batch(self, test_batch, extra_batch_data):
+        # 计算测试集损失
+        _,display_map=self.compute_loss_function(test_batch, extra_batch_data)
+
+        # 更新损失
+        self.update_test_display_loss(display_map)
+
+    def on_test_loss(self):
+        """
+        计算测试集损失
+        """
+        if self.test_dataset!=None:
+            print("------------------------------------------------------------------")
+            print("Calculating test loss on test dataset.")
+            
+            for num, each_batch in self.test_dataset.enumerate():
+
+                print("\r"+"input_batch {}...".format(num), end="", flush=True)
+
+                extra_batch_data=self.before_train_batch()
+                self.on_test_batch(each_batch, extra_batch_data)
+
+            print()
+            print("Test ended.")
 
     def compute_test_metrics_function(self, each_batch, extra_batch_data):
         """
@@ -382,7 +459,6 @@ class Container:
         返回key-value键值对，其中key为评价指标名称
         """
         return {}
-        
 
     def on_test_metrics(self):
         """
@@ -395,7 +471,7 @@ class Container:
             display_map={}
             count=0
             for each_batch in self.test_dataset:
-                extra_batch_data=self.before_train_batch
+                extra_batch_data=self.before_train_batch()
                 metrics_map=self.compute_test_metrics_function(each_batch, extra_batch_data)
 
                 #第一次计算
@@ -416,13 +492,27 @@ class Container:
         else:
             return {}
 
+    def visual_function(self, each_batch, extra_batch_data):
+        """
+        可视化方式
+        返回结果集。会进行可视化保存与展示。
+        默认不提供方法，需要父类覆盖。
+        """
+        return {}
+
     def on_test_visual(self):
         """
         所有可视化评估内容全部在该方法中实现。
         返回结果集，为两个列表结构，其中第一个列表是图像集，第二个列表是图像名称。会进行可视化保存与展示。
-        默认不提供方法，需要父类覆盖。
         """
-        return [], []
+
+         # 测试可视化结果
+        for each_batch in self.test_dataset.take(1):
+            extra_batch_data=self.before_train_batch()
+
+            visual_map=self.visual_function(each_batch, extra_batch_data)
+
+        return visual_map
 
     def on_test_epoch(self, current_epoch, display_map):
         """
@@ -433,21 +523,31 @@ class Container:
         # 进行定量数据评估
         data_map = self.on_test_metrics()
         # 进行可视化评估
-        image_list, title_list = self.on_test_visual()
+        visual_map = self.on_test_visual()
 
         display_map.update(data_map)
         # 保存损失与定量测试结果
         self.log_tool.save_loss(display_map)
 
-        # 检查输出长度是否一致
-        if len(image_list) != len(title_list):
-            print("error: the lenght of image list and title list are not the same.")
-            sys.exit(0)
+        if "image" in visual_map:
+            image_list=visual_map["image"]["image_list"]
+            title_list=visual_map["image"]["title_list"]
 
-        # 当需要保存可视化
-        if len(image_list) > 0:
-            # 保存可视结果
-            self.log_tool.save_image_list(image_list, title_list)
+            # 检查输出长度是否一致
+            if len(image_list) != len(title_list):
+                print("error: the lenght of image list and title list are not the same.")
+                sys.exit(0)
+
+            # 当需要保存可视化
+            if len(image_list) > 0:
+                # 是否添加描述
+                description=None
+                # 传入的内容必须是python基础结构，否则无法保存。
+                if "description" in visual_map:
+                    description=visual_map["description"]
+
+                # 保存可视结果
+                self.log_tool.save_image_list(image_list, title_list, description)
 
     def on_train(self):
         """
@@ -469,17 +569,32 @@ class Container:
             # initial time
             start = time.time()
 
+            #重置损失函数记录器
+            for reocrder in self.train_loss_recorder_map.values():
+                reocrder.reset_states()
+
+            for reocrder in self.test_loss_recorder_map.values():
+                reocrder.reset_states()
+
             # inovke each round
             # train epoch
             self.on_train_epoch(epoch)
 
-            # 获取所有展示值
-            display_map={}
-            for each in self.loss_recorder_map:
-                display_map[each]=self.loss_recorder_map[each].result()
-
             # 每过一个保存阶段就会调用一次该函数
             if epoch % self.config_loader.save_period == 0:
+                 # 获取所有展示值
+                display_map={}
+                #同时计算训练集损失
+                for each in self.train_loss_recorder_map:
+                    display_map["train: "+each]=self.train_loss_recorder_map[each].result()
+                
+                #计算测试集损失
+                self.on_test_loss()
+
+                #同时计算训练集损失
+                for each in self.train_loss_recorder_map:
+                    display_map["test: "+each]=self.test_loss_recorder_map[each].result()
+
                 # test epoch
                 self.on_test_epoch(epoch, display_map)
 
@@ -524,6 +639,10 @@ def main(config_loader):
     """
     守护进程接口，daemon.py会调用该接口
     """
+    #添加环境
+    path_list=config_loader.runtime_path
+    for path in path_list:
+        sys.path.append(path)
 
     # 创建训练类
     # 名称是以点的形式创建，如：eidolon.pixel_container.PixelContainer
@@ -557,6 +676,7 @@ def main(config_loader):
             print(
                 "This program will only use the memory of device GPU:{}....".format(device_id))
             # 把其他显卡设成不可见
+            # device_id 型如： GPU:0
             os.environ["CUDA_VISIBLE_DEVICES"] = device_id
 
             # 启动生命周期

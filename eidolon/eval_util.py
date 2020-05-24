@@ -6,8 +6,8 @@ def evaluate(image1, image2, psnr_enable=True, ssim_enable=True, ber_enable=Fals
     """
     this is for eval
     可测试psnr, ssim, ber
-    :param: image1: tensor structure with [..,128,128,3] or [..,32,32,3], the scale is [-1,1]
-    :param: image2: tensor structure with [..,128,128,3] or [..,32,32,3], the scale is [-1,1]
+    :param: image1: tensor structure with [..,128,128,3] or [..,32,32,3], et. al, the scale is [-1,1]
+    :param: image2: tensor structure with [..,128,128,3] or [..,32,32,3], et. al, the scale is [-1,1]
     :param: ssim_enable
     :param: psnr_enable
     :param: ber_enable

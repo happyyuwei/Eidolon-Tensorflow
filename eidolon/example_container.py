@@ -54,7 +54,7 @@ class MnistGANContainer(train.Container):
                                           "discriminator": self.discriminator}, "discriminator_opt")
 
         
-        self.register_display_metrics(["generator loss","discriminator loss"])
+        self.register_display_loss(["generator loss","discriminator loss"])
         # 调用父类
         super(MnistGANContainer, self).on_prepare()
 
@@ -123,7 +123,7 @@ class MnistClassifierContainer(train.Container):
         self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
 
         # 注册需要记录的损失名称
-        self.register_display_metrics(["train loss"])
+        self.register_display_loss(["loss"])
 
         # 调用父类
         super(MnistClassifierContainer, self).on_prepare()
@@ -138,7 +138,7 @@ class MnistClassifierContainer(train.Container):
         loss = self.loss_function(labels, outputs)
 
         # 返回结果集
-        return {"optimizer": loss}, {"train loss": loss}
+        return {"optimizer": loss}, {"loss": loss}
 
     def compute_test_metrics_function(self, each_batch, extra_batch_data):
 

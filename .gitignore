@@ -14,3 +14,4 @@ trained_models/*[!*.md]
 gui/runtime/*
 #忽略所有python代码缓存
 __pycache__
+.vscode

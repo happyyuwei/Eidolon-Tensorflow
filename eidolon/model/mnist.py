@@ -8,10 +8,10 @@ mnist手写体数字识别分类网络，其训练容器见example_container.Mni
 @author yuwei
 """
 
-def make_DNN_model():
+def make_DNN_model(input_shape):
 
     #定义各层
-    inputs=tf.keras.layers.Input(shape=(28,28))
+    inputs=tf.keras.layers.Input(shape=input_shape)
 
     flatten=tf.keras.layers.Flatten()
 

@@ -2,12 +2,14 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 # system lib
 import os
 import time
 import math
+import json
+import importlib
 
 """
 image type, this is used to define whether the show image is binary or color
@@ -18,6 +20,25 @@ image type, this is used to define whether the show image is binary or color
 IMAGE_RGB = "rgb"
 # 二值图像
 IMAGE_BINARY = "binary"
+
+
+
+def load_function(function_name):
+    """载入函数实例,形如 tf.keras....
+
+    @since 2020.5.16
+    从不同地方抽离成公共函数
+
+    Arguments:
+        function_name {[type]} -- [description]
+    """
+
+    module_name = ".".join(function_name.split(".")[0:-1])
+    function_name = function_name.split(".")[-1]
+
+    module = importlib.import_module(module_name)
+    function = getattr(module, function_name)
+    return function
 
 
 def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
@@ -50,16 +71,14 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
     drawable = np.array(image_tensor)
     drawable[drawable < 0] = 0
     drawable[drawable > 1] = 1
+    shape = np.shape(drawable)
 
-
-    shape=np.shape(drawable)
-
-    #只有长宽的单通道灰度图
-    #@since 2020.4.10 支持单通道图像绘制
-    #@author yuwei
-    if len(shape)==2:
+    # 只有长宽的单通道灰度图
+    # @since 2020.4.10 支持单通道图像绘制
+    # @author yuwei
+    if len(shape) == 2:
         [height, width] = np.shape(drawable)
-        drawable=np.reshape(drawable,[height,width,1])
+        drawable = np.reshape(drawable, [height, width, 1])
 
     [height, width, channel] = np.shape(drawable)
     # change binary image
@@ -95,8 +114,12 @@ def save_image(image_tensor, file, min=0, max=1, image_type=IMAGE_RGB):
     img.save(file, "png")
 
 
-def save_images(image_list, title_list, image_dir, seq=""):
+def save_images(image_list, title_list, image_dir, seq="", max_save=5, description=None, desc_file=None):
     """
+    @update 2020.5.16
+    增加单次保存多批次图像的功能
+    支持保存图片描述，在分类任务中，可以在描述中保存图片预测结果
+
     this function is to save image list, each image in he image list should be tensor with [0, height,width, 3]
     @since 2019.9.14
     @author yuwei
@@ -104,14 +127,63 @@ def save_images(image_list, title_list, image_dir, seq=""):
     :param title_list:
     :param image_dir
     :param seq
+    :param max 每轮最大保存数量
+    :description 描述，可以是任何结构，推荐字典结构
+    :desc_file 描述文件
     :return:
     """
     if seq != "":
         seq = str(seq) + "_"
-
+    # 按照文件名保存
     for i in range(len(title_list)):
-        dir = os.path.join(image_dir, seq + title_list[i] + ".png")
-        save_image(image_list[i], dir, min=-1, max=1)
+        # 拼接地址
+        save_dir_prefix = seq + title_list[i]
+        # 获取图像数量
+        shape = np.shape(image_list[i])
+        num = shape[0]
+        # 超出数量不予保存
+        if num > max_save:
+            num = max_save
+        # 保存多批次
+        for j in range(num):
+            # if num > 1:
+                # 文件格式  {epoch}_{title}_{num}.png
+                # 只有一种格式，不允许使用其他格式。
+                # 当只保存一张图，num=1，则格式为 {epoch}_{title}.png
+            save_dir_file = save_dir_prefix+"_{}.png".format(j+1)
+            # else:
+            #     save_dir_file = save_dir_prefix+".png"
+            save_dir = os.path.join(image_dir, save_dir_file)
+            image_batch = image_list[i]
+            # 保存图片
+            save_image(image_batch[j:j+1, :, :, :], save_dir, min=-1, max=1)
+            # 保存描述到文件中
+            if description != None:
+                temp={}
+                #将字典中的numpy转成list
+                for key in description:
+                    array=np.array(description[key][j])
+                    temp[key]=array.tolist()
+
+                save_desc = {
+                    # 保存格式 {epoch}_{num}
+                    seq+str(j): temp
+                }
+                if os.path.exists(desc_file) == True:
+                     # 读取原文件
+                    with open(desc_file, "r", encoding="utf-8") as f:
+                        total_desc = json.load(f)
+                # 若文件不存在则创建
+                else:
+                    total_desc = {}
+                # 追加
+                total_desc.update(save_desc)
+                # 生成json
+                total_desc_json = json.dumps(
+                    total_desc, ensure_ascii=False, indent=2)
+                # 保存
+                with open(desc_file, "w", encoding="utf-8") as f:
+                    f.write(total_desc_json)
 
 
 def read_image(path, width, height, change_scale=False, binary=False, threshold=0.5):
@@ -187,8 +259,11 @@ actually, log epoch must be vary instead of 1
 
 class LogTool:
 
-    def __init__(self, log_dir, save_period, tensorboard_enable=False):
+    def __init__(self, log_dir, save_period, max_save=5, tensorboard_enable=False):
         """
+        @update 2020.5.16
+        支持单次保存多批次图像
+
         initial directionary
         负责管理整个训练系统的记录
         目前支持默认文本方式记录，与tensorboard方式记录。
@@ -201,11 +276,20 @@ class LogTool:
         :param log_dir:
         :param save_period
         :param tensorboard_enable
+        :param max_save
         """
+        # 日志目录
         self.log_dir = log_dir
+        # 保存周期
         self.save_period = save_period
+        # 图像结果目录
         self.image_dir = os.path.join(log_dir, "result_image")
+        # 标签结果目录，在result_image中
+        self.label_dir = os.path.join(self.image_dir, "label.txt")
+        # 训练日志
         self.train_log_dir = os.path.join(log_dir, "train_log.txt")
+        # 最大保存轮数
+        self.max_save = max_save
         # create dir if not exist
         if os.path.exists(self.log_dir) is False:
             os.mkdir(log_dir)
@@ -258,7 +342,7 @@ class LogTool:
                 tf.summary.scalar(
                     key, data=loss_set[key], step=self.current_epoch)
 
-    def save_image_list(self, image_list, title_list):
+    def save_image_list(self, image_list, title_list, description=None):
         """
         @update 2019.11.27
         the basic logis removes to extern file
@@ -266,11 +350,25 @@ class LogTool:
         @author yuwei
         :param image_list:
         :param title_list:
+        :param description: 推荐字典或者字符串
         :return:
         """
-        save_images(image_list, title_list, self.image_dir, self.current_epoch)
+
+        save_images(image_list, title_list, self.image_dir,
+                    self.current_epoch, self.max_save, description, self.label_dir)
+
         if self.tensorboard_enable == True:
             self.save_image_list_tensorboard(image_list, title_list)
+
+    def save_label_list(self, predict_label, title_list, labels):
+        """保存分类结果，用于分类任务测试可视化
+
+        Arguments:
+            predict_list {[预测结果]} -- [description]
+            title_list {[标题，与分类图像标题对应]} -- [description]
+            labels {[标签]}
+        """
+        # 解析
 
     def save_loss(self, loss_set):
         """
@@ -418,6 +516,48 @@ def paint_loss(log_dir, update_time=30, save=False):
             plt.savefig("loss.png")
             print("update...")
             time.sleep(update_time)
+
+
+def visual_classify(img, label_list, prob_list):
+    """
+    可视化分类结果，把类别的概率展示出来。返回四维张量【-1,1】
+    目前尚在设计之中
+    :param: img 四维张量
+    :param:label_list 标签集
+    :param: prob_list 概率集
+    """
+
+    # 转成uint8类型
+    img = np.uint8(img*127.5+127.5)
+    img = Image.fromarray(img)
+    # 获取尺寸
+    w, h = img.size
+
+    # 添加图片
+    result = Image.new('RGB', (w, int(h*1.5)), (255, 255, 255))
+    result.paste(img, box=(0, 0))
+
+    draw = ImageDraw.Draw(result)
+
+    # 生成标签
+    word = ""
+    for i in range(len(label_list)):
+        # 概率保留两位
+        word = word+label_list[i]+": "+"{:.2f}".format(prob_list[i])+"."
+
+    # 添加标签
+    draw.text((int(w*0.1), int(h*1.2)), word, fill="black")
+
+    # 转 numpy
+    result = np.array(result)
+    [h, w, c] = np.shape(result)
+
+    # 从【0,255】 转成 【-1,1】
+    result = result/127.5-1
+
+    # 转成四维张量
+    return np.reshape(result, [1, h, w, c])
+
 
 
 def remove_history_checkpoints(dir):
