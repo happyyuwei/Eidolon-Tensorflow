@@ -71,10 +71,6 @@ class ClassifyContainer(train.Container):
         # 标题
         title_list = []
 
-        #标签名
-        
-
-
         # 生成测试结果
         predicted_label = self.model(test_input)
 

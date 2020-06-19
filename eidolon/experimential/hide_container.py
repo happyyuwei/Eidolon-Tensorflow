@@ -80,8 +80,6 @@ class HideContainer(train.Container):
         return create_fuck_message(self.config_loader.batch_size)
 
 
-
-
     def compute_loss_function(self, each_batch, extra_batch_data):
         """
         损失函数

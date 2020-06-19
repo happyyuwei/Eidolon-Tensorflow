@@ -175,9 +175,9 @@ import tensorflow_datasets as tfds
 
 
 # print(a)
-    # print(tf.shape(a))
+# print(tf.shape(a))
 #     sys.exit()
-    # print(np.array(a).shape)
+# print(np.array(a).shape)
 
 # from eidolon import train_tool
 
@@ -189,7 +189,6 @@ import tensorflow_datasets as tfds
 # print(s)
 
 # (train_dataset, test_dataset), info=tfds.load(name="mnist", split=["train","test"], as_supervised=True,  with_info=True)
-
 
 
 # def normalize_img(image, label):
@@ -214,13 +213,12 @@ import tensorflow_datasets as tfds
 #     print(a)
 #     sys.exit(0)
 
-# (train_dataset, test_dataset), info = tfds.load(name="mnist", 
+# (train_dataset, test_dataset), info = tfds.load(name="mnist",
 #                                                         split=["train", "test"], as_supervised=True,  with_info=True)
 
 # # print(info.splits['train'].num_examples)
 # print(info)
 
-    
 
 # a=tf.cast(np.zeros([128,28,28,3]), tf.float32)
 # s=tf.shape(a)
@@ -237,31 +235,38 @@ from eidolon import loader
 #     print(each)
 #     sys.exit(0)
 
-def create_fuck_message(batch):
 
-    temp=np.zeros([batch,128,128,3])
+def create_fuck_message(batch, message_len_sqrt, img_width):
+
+    temp = np.zeros([batch, 128, 128, 3])
+    repeat_len = img_width/message_len_sqrt
 
     for i in range(batch):
-        rand = np.random.randint(0,2,(64))
-        rand=rand*2-1
-        rand=np.repeat(rand,256)
-        rand=np.reshape(rand,[128,128])
+        rand = np.random.randint(0, 2, ([message_len_sqrt, message_len_sqrt]))
+        rand = rand*2-1
+        rand = np.repeat(rand, repeat_len, axis=1)
+        rand = np.repeat(rand, repeat_len, axis=0)
 
-        temp[i,:,:,0]=rand
-        temp[i,:,:,1]=rand
-        temp[i,:,:,2]=rand
+        temp[i, :, :, 0] = rand
+        temp[i, :, :, 1] = rand
+        temp[i, :, :, 2] = rand
 
-    temp=tf.cast(temp, tf.float32)
+    temp = tf.cast(temp, tf.float32)
 
     return temp
 
-m=create_fuck_message(3)
 
-plt.imshow(m[0]*0.5+0.5)
-plt.show()
-plt.imshow(m[1]*0.5+0.5)
-plt.show()
-plt.imshow(m[2]*0.5+0.5)
-plt.show()
-plt.imshow(m[3]*0.5+0.5)
-plt.show()
+# m = create_fuck_message(3, 16, 128)
+
+# plt.imshow(m[0]*0.5+0.5)
+# plt.show()
+# plt.imshow(m[1]*0.5+0.5)
+# plt.show()
+# plt.imshow(m[2]*0.5+0.5)
+# plt.show()
+# plt.imshow(m[3]*0.5+0.5)
+# plt.show()
+
+from eidolon.tutorial.semantic.dataset import load_dataset
+d=load_dataset("./data/city/train", 1)
+print(d)
